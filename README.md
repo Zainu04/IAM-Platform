@@ -3,7 +3,7 @@
 Automated IT Onboarding & Offboarding Management System
 
 ## Team Members
-- Zainab (Project Lead)
+- Zainab
 - Hugo
 - Maliha
 - Javier
