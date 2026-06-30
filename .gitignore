@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Vite
+dist/
+.vite/
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
