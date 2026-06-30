@@ -13,7 +13,9 @@ Automated IT Onboarding & Offboarding Management System
 - React
 - Vite
 - React Router
-- CSS
+- CSS-
+- HTML
+- JavaScript
 
 ## Setup
 
