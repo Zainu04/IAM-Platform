@@ -1,23 +1,27 @@
-import { Bell, Search, Settings, UserCircle } from 'lucide-react';
-
 function TopNavbar({ title }) {
   return (
-    <header className="top-navbar">
-      <div>
-        <h1>{title}</h1>
-        <p>Automated IT Onboarding & Offboarding Management System</p>
+    <header className="topbar">
+      <div className="topbar-title">{title}</div>
+
+      <div className="topbar-search">
+        <span>⌕</span>
+        <input type="text" placeholder="Search employees, requests, equipment…" />
       </div>
 
-      <div className="top-actions">
-        <div className="search-box">
-          <Search size={16} />
-          <input type="text" placeholder="Search..." />
-        </div>
-        <button className="icon-button" aria-label="Settings"><Settings size={18} /></button>
-        <button className="icon-button" aria-label="Notifications"><Bell size={18} /></button>
-        <div className="user-chip">
-          <UserCircle size={22} />
-          <span>Admin</span>
+      <div className="topbar-right">
+        <button className="topbar-icon-btn" title="Settings">⚙</button>
+        <button className="topbar-icon-btn" title="Notifications">
+          
+          <span className="notif-dot">5</span>
+        </button>
+        <div className="topbar-divider" />
+        <div className="topbar-user">
+          <div className="topbar-avatar">ZA</div>
+          <div className="topbar-user-text">
+            <div className="topbar-user-name">Zainab Akhtar</div>
+            
+          </div>
+          <span className="chevron-down">⌄</span>
         </div>
       </div>
     </header>
