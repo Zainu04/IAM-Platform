@@ -1,17 +1,1 @@
-import PageShell from '../components/PageShell.jsx';
-
-function Reports() {
-  return (
-    <PageShell pageName="Reports" owner="Zainab">
-      <div className="starter-note">
-        <h3>Zainab: build the Reports page here</h3>
-        <p>This file is intentionally a starter shell. Use the wireframe and development guide to build this page's UI.</p>
-        <ul>
-          <li>Create report cards, filters, chart placeholders, and export button.</li>
-        </ul>
-      </div>
-    </PageShell>
-  );
-}
-
-export default Reports;
+import {useOutletContext} from "react-router-dom";import {Download} from "lucide-react";function dl(name,rows){const h=rows.length?Object.keys(rows[0]):[];const csv=[h.join(","),...rows.map(r=>h.map(k=>`"${String(r[k]).replace(/"/g,'""')}"`).join(","))].join("\n");const u=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));const a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u)}export default function Reports(){const c=useOutletContext();const reports=[{t:"Onboarding summary",d:"Every active onboarding journey with current progress.",f:()=>dl("onboarding-report.csv",c.employees.filter(e=>e.type==="onboarding").map(e=>({Name:e.name,Role:e.role,Start:e.startLabel,Progress:`${e.progress}%`})))},{t:"Offboarding summary",d:"Every active offboarding journey with current progress.",f:()=>dl("offboarding-report.csv",c.employees.filter(e=>e.type==="offboarding").map(e=>({Name:e.name,Role:e.role,LastDay:e.startLabel,Progress:`${e.progress}%`})))},{t:"Task list",d:"All open and completed manager tasks.",f:()=>dl("tasks-report.csv",c.tasks.map(t=>({Task:t.label,Category:t.subLabel,Priority:t.priority,Status:t.done?"Done":"Open"})))},{t:"Access requests",d:"Pending and resolved access requests.",f:()=>dl("access-requests-report.csv",c.accessRequests)}];return <div><div className="page-header"><div><h2>Reports</h2><p>Create and download custom reports as CSV files.</p></div></div><div className="quick-actions">{reports.map(r=><div className="qa-card" key={r.t}><div><p className="qa-title">{r.t}</p><p className="qa-desc">{r.d}</p></div><button className="btn-primary" onClick={()=>{r.f();c.flash(`Downloaded ${r.t}.`)}}><Download/>Download CSV</button></div>)}</div></div>}

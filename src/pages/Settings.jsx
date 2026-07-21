@@ -1,17 +1,1 @@
-import PageShell from '../components/PageShell.jsx';
-
-function Settings() {
-  return (
-    <PageShell pageName="Settings" owner="Zainab">
-      <div className="starter-note">
-        <h3>Zainab: build the Settings page here</h3>
-        <p>This file is intentionally a starter shell. Use the wireframe and development guide to build this page's UI.</p>
-        <ul>
-          <li>Create settings category cards and configuration panels.</li>
-        </ul>
-      </div>
-    </PageShell>
-  );
-}
-
-export default Settings;
+import {useState} from "react";import {useOutletContext} from "react-router-dom";export default function Settings(){const c=useOutletContext(),[name,setName]=useState(c.currentUser.name),[title,setTitle]=useState(c.currentUser.title),[email,setEmail]=useState(true),[saved,setSaved]=useState(false);return <div><div className="page-header"><div><h2>Settings</h2><p>Manage your profile and preferences.</p></div></div><div className="card settings-card"><form onSubmit={e=>{e.preventDefault();c.saveUser({name,title});setSaved(true);setTimeout(()=>setSaved(false),1800)}}><div className="field"><label>Full name</label><input value={name} onChange={e=>setName(e.target.value)}/></div><div className="field"><label>Job title</label><input value={title} onChange={e=>setTitle(e.target.value)}/></div><label className="checkbox-field"><input type="checkbox" checked={email} onChange={e=>setEmail(e.target.checked)}/>Email me about new task assignments</label><button className="btn-primary full">{saved?"Saved!":"Save changes"}</button></form></div></div>}

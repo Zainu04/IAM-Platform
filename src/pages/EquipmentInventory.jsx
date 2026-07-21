@@ -1,17 +1,1 @@
-import PageShell from '../components/PageShell.jsx';
-
-function EquipmentInventory() {
-  return (
-    <PageShell pageName="Equipment Inventory" owner="Maliha">
-      <div className="starter-note">
-        <h3>Maliha: build the Equipment Inventory page here</h3>
-        <p>This file is intentionally a starter shell. Use the wireframe and development guide to build this page's UI.</p>
-        <ul>
-          <li>Create the equipment inventory table, filters, statuses, and inventory action buttons.</li>
-        </ul>
-      </div>
-    </PageShell>
-  );
-}
-
-export default EquipmentInventory;
+import {useState} from "react";import {useOutletContext} from "react-router-dom";import {Plus} from "lucide-react";export default function EquipmentInventory(){const c=useOutletContext(),[show,setShow]=useState(false),[item,setItem]=useState(""),[tag,setTag]=useState("");return <div><div className="page-header"><div><h2>Equipment</h2><p>Track hardware assigned to onboarding and offboarding employees.</p></div><button className="btn-primary" onClick={()=>setShow(!show)}><Plus/>Add equipment</button></div>{show&&<form className="card inline-form" onSubmit={e=>{e.preventDefault();if(item)c.addEquipment({item,assetTag:tag||`JO-${Date.now().toString().slice(-4)}`,assignedTo:"Unassigned",status:"Available"});setItem("");setTag("");setShow(false)}}><div className="field"><label>Equipment name</label><input value={item} onChange={e=>setItem(e.target.value)} required/></div><div className="field"><label>Asset tag</label><input value={tag} onChange={e=>setTag(e.target.value)}/></div><button className="btn-primary">Save equipment</button></form>}<div className="card"><table className="data-table"><thead><tr><th>Item</th><th>Asset Tag</th><th>Assigned To</th><th>Status</th><th></th></tr></thead><tbody>{c.equipment.map(eq=><tr key={eq.id}><td><strong>{eq.item}</strong></td><td>{eq.assetTag}</td><td>{eq.assignedTo}</td><td><span className={`status-chip ${eq.status.replace(/\s+/g,"")}`}>{eq.status}</span></td><td>{eq.status!=="Assigned"&&<button className="btn-secondary" onClick={()=>c.markEquipment(eq.id)}>Mark handled</button>}</td></tr>)}</tbody></table></div></div>}

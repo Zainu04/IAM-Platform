@@ -1,17 +1,1 @@
-import PageShell from '../components/PageShell.jsx';
-
-function AccessRequests() {
-  return (
-    <PageShell pageName="Access Requests" owner="Anthony">
-      <div className="starter-note">
-        <h3>Anthony: build the Access Requests page here</h3>
-        <p>This file is intentionally a starter shell. Use the wireframe and development guide to build this page's UI.</p>
-        <ul>
-          <li>Create the access request table, status badges, and approve/deny/view buttons.</li>
-        </ul>
-      </div>
-    </PageShell>
-  );
-}
-
-export default AccessRequests;
+import {useOutletContext} from "react-router-dom";import {Check,X} from "lucide-react";export default function AccessRequests(){const c=useOutletContext(),p=c.accessRequests.filter(r=>r.status==="Pending"),resolved=c.accessRequests.filter(r=>r.status!=="Pending");const table=(rows,actions)=><table className="data-table"><thead><tr><th>Employee</th><th>System</th><th>Requested</th><th>Status</th>{actions&&<th>Actions</th>}</tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><div className="table-person"><img src={r.avatar}/><strong>{r.name}</strong></div></td><td>{r.system}</td><td>{r.requested}</td><td><span className={`status-chip ${r.status}`}>{r.status}</span></td>{actions&&<td><button className="icon-btn approve" onClick={()=>c.decideAccess(r.id,"Approved")}><Check/></button><button className="icon-btn deny" onClick={()=>c.decideAccess(r.id,"Denied")}><X/></button></td>}</tr>)}</tbody></table>;return <div><div className="page-header"><div><h2>Access Requests</h2><p>{p.length} requests waiting on your review.</p></div></div><div className="card"><h3 className="section-title">Pending</h3>{p.length?table(p,true):<div className="empty-state">Nothing pending — nice work.</div>}</div>{resolved.length>0&&<div className="card section-gap"><h3 className="section-title">Resolved</h3>{table(resolved,false)}</div>}</div>}
