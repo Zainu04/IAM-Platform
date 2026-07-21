@@ -1,56 +1,37 @@
 
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --nav-bg: #0b1f3a;
-  --nav-bg2: #0d2448;
-  --nav-active: #1a3a68;
-  --nav-hover: #112b55;
-  --nav-text: #b8cce4;
-  --nav-text-dim: #5b7a9e;
-  --nav-border: #162e52;
+  /* Core palette */
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --border: #d8dce2;
+  --text: #1f2933;
+  --muted: #6b7280;
+  --muted-light: #9ca3af;
+  --accent: #1a6fe0;
+  --sidebar: #0b1f3a;
+  --active: #eef2f7;
 
-  --page-bg: #eef2f8;
-  --card: #ffffff;
-  --border: #dde3ee;
-  --border-light: #eef2f8;
-
-  --t1: #0d1b2e;
-  --t2: #3d5270;
-  --t3: #8099ba;
-
+  /* Compatibility variables required by the merged layout */
+  --page-bg: var(--bg);
+  --card: var(--surface);
+  --t1: var(--text);
+  --t3: var(--muted-light);
   --blue: #1a6fe0;
-  --blue-dim: #ebf1fd;
-  --blue-mid: #d0e1fa;
-
-  --green: #16a34a;
-  --green-dim: #dcfce7;
-  --amber: #d97706;
-  --amber-dim: #fef3c7;
   --red: #dc2626;
-  --red-dim: #fee2e2;
-  --gray-dim: #f1f5f9;
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
 
-  --shadow-sm:
-    0 1px 3px rgba(11, 31, 58, 0.08),
-    0 1px 2px rgba(11, 31, 58, 0.04);
-
-  --shadow-md:
-    0 4px 6px rgba(11, 31, 58, 0.07),
-    0 2px 4px rgba(11, 31, 58, 0.05);
-
-  --font: 'Inter', system-ui, sans-serif;
-  --mono: 'JetBrains Mono', monospace;
-
-  /* Compatibility variables for Equipment Inventory */
-  --bg: var(--page-bg);
-  --surface: var(--card);
-  --text: var(--t1);
-  --muted: var(--t2);
-  --muted-light: var(--t3);
-  --accent: var(--blue);
-  --sidebar: var(--nav-bg);
-  --active: var(--border-light);
+  /* Sidebar/navigation colors */
+  --nav-bg: #0b1f3a;
+  --nav-border: rgba(255, 255, 255, 0.1);
+  --nav-hover: rgba(255, 255, 255, 0.08);
+  --nav-active: rgba(26, 111, 224, 0.2);
+  --nav-text: #dbe5f3;
+  --nav-text-dim: #8fa3bd;
 }
 
 *,
@@ -221,42 +202,17 @@ textarea {
   font-weight: 500;
   padding: 1px 7px;
   border-radius: 10px;
-  min-width: 20px;
-  text-align: center;
+  font-size: 14px;
 }
 
-.sb-badge.warn {
-  background: var(--amber);
+.nav-item:hover,
+.nav-item.active {
+  background: var(--active);
+  color: var(--text);
 }
 
-.sb-badge.alert {
-  background: var(--red);
-}
-
-.sb-footer {
-  padding: 18px 24px;
-  border-top: 1px solid var(--nav-border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.sb-user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--nav-active);
-  border: 2px solid var(--blue);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.sb-user-info {
+.main-shell {
+  flex: 1;
   min-width: 0;
 }
 
@@ -723,56 +679,10 @@ textarea {
 /* Responsive */
 
 @media (max-width: 900px) {
-  .app-shell {
-    flex-direction: column;
-    overflow: visible;
-  }
-
-  .sidebar {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .main-shell {
-    overflow: visible;
-  }
-
-  .page-content {
-    padding: 18px;
-  }
-
-  .eq-grid4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .eq-form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .eq-field-full {
-    grid-column: auto;
-  }
-}
-
-@media (max-width: 600px) {
-  .eq-grid4 {
-    grid-template-columns: 1fr;
-  }
-
-  .eq-toolbar-add {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .eq-toolbar-add .eq-btn {
-    width: 100%;
-  }
-
-  .eq-table {
-    min-width: 700px;
-  }
-
-  .eq-panel {
-    overflow-x: auto;
-  }
+  .app-shell { flex-direction: column; }
+  .sidebar { width: 100%; min-height: auto; position: static; }
+  .nav-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .top-navbar { height: auto; align-items: flex-start; flex-direction: column; padding: 18px; }
+  .top-actions { width: 100%; flex-wrap: wrap; }
+  .search-box { width: 100%; }
 }
