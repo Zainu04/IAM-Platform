@@ -1,17 +1,1 @@
-import PageShell from '../components/PageShell.jsx';
-
-function Onboarding() {
-  return (
-    <PageShell pageName="Onboarding" owner="Zainab">
-      <div className="starter-note">
-        <h3>Zainab: build the Onboarding page here</h3>
-        <p>This file is intentionally a starter shell. Use the wireframe and development guide to build this page's UI.</p>
-        <ul>
-          <li>Create the new hire onboarding form, access review, equipment assignment, and notification preview.</li>
-        </ul>
-      </div>
-    </PageShell>
-  );
-}
-
-export default Onboarding;
+import {useOutletContext} from "react-router-dom";import {UserPlus,ChevronRight} from "lucide-react";export default function Onboarding(){const c=useOutletContext(),list=c.employees.filter(e=>e.type==="onboarding");return <div><div className="page-header"><div><h2>Onboarding</h2><p>{list.length} active onboarding journeys.</p></div><button className="btn-primary" onClick={c.startOnboarding}><UserPlus/>Start Onboarding Process</button></div><div className="card">{list.map(e=><div className="journey-row" key={e.id}><div className="person"><img src={e.avatar}/><div><strong>{e.name}</strong><div className="role">{e.role}</div><span className="pill gold">{e.startLabel}</span></div></div><div className="progress-block"><div className="label">Overall Progress</div><div className="progress-bar-row"><div className="progress-track"><div className="progress-fill " style={{width:`${e.progress}%`}}/></div><span className="progress-pct">{e.progress}%</span></div></div><div className="next-step"><div className="label"><span>Next Step</span><span className="due">Due {e.nextStep.due}</span></div><div className="step-line">{e.nextStep.label}</div></div><button className="row-chevron" onClick={()=>c.openEmployee(e)}><ChevronRight/></button></div>)}{!list.length&&<div className="empty-state">No onboarding journeys yet.</div>}</div></div>}

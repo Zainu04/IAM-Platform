@@ -1,17 +1,1 @@
-import PageShell from '../components/PageShell.jsx';
-
-function Employees() {
-  return (
-    <PageShell pageName="Employees" owner="Hugo">
-      <div className="starter-note">
-        <h3>Hugo: build the Employees page here</h3>
-        <p>This file is intentionally a starter shell. Use the wireframe and development guide to build this page's UI.</p>
-        <ul>
-          <li>Create the employee directory table, search, filters, and action buttons.</li>
-        </ul>
-      </div>
-    </PageShell>
-  );
-}
-
-export default Employees;
+import {useState} from "react";import {useOutletContext} from "react-router-dom";import {Search,UserPlus} from "lucide-react";export default function Employees(){const c=useOutletContext(),[q,setQ]=useState("");const f=c.employees.filter(e=>(e.name+e.role+e.department).toLowerCase().includes(q.toLowerCase()));return <div><div className="page-header"><div><h2>Employees</h2><p>{c.employees.length} people currently on a journey.</p></div><button className="btn-primary" onClick={c.startOnboarding}><UserPlus/>Add employee</button></div><div className="card"><div className="search-box page-search"><Search/><input placeholder="Search employees..." value={q} onChange={e=>setQ(e.target.value)}/></div><table className="data-table"><thead><tr><th>Employee</th><th>Department</th><th>Type</th><th>Key Date</th><th>Progress</th><th></th></tr></thead><tbody>{f.map(e=><tr key={e.id}><td><div className="table-person"><img src={e.avatar}/><div><strong>{e.name}</strong><small>{e.role}</small></div></div></td><td>{e.department}</td><td><span className={`status-chip ${e.type}`}>{e.type}</span></td><td>{e.startLabel}</td><td>{e.progress}%</td><td><button className="btn-secondary" onClick={()=>c.openEmployee(e)}>View</button></td></tr>)}</tbody></table>{!f.length&&<div className="empty-state">No employees match “{q}”</div>}</div></div>}

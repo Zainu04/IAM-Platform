@@ -1,17 +1,1 @@
-import PageShell from '../components/PageShell.jsx';
-
-function Notifications() {
-  return (
-    <PageShell pageName="Notifications" owner="Zainab">
-      <div className="starter-note">
-        <h3>Zainab: build the Notifications page here</h3>
-        <p>This file is intentionally a starter shell. Use the wireframe and development guide to build this page's UI.</p>
-        <ul>
-          <li>Create notification templates and notification history.</li>
-        </ul>
-      </div>
-    </PageShell>
-  );
-}
-
-export default Notifications;
+import {useOutletContext} from "react-router-dom";import {Bell,CheckCheck} from "lucide-react";export default function Notifications(){const c=useOutletContext(),unread=c.notifications.filter(n=>!n.read).length;return <div><div className="page-header"><div><h2>Notifications</h2><p>{unread} unread updates.</p></div><button className="btn-secondary" onClick={c.markAllNotifications}><CheckCheck/>Mark all as read</button></div><div className="card">{c.notifications.map(n=><button key={n.id} className={`notification-row ${n.read?"read":""}`} onClick={()=>c.markNotification(n.id)}><span className="notification-icon"><Bell/></span><span className="notification-body"><strong>{n.text}</strong><small>{n.time}</small></span>{!n.read&&<span className="unread-dot"/>}</button>)}</div></div>}

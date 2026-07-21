@@ -1,35 +1,72 @@
-import { Outlet, useLocation } from 'react-router-dom';
-import Sidebar from './Sidebar.jsx';
-import TopNavbar from './TopNavbar.jsx';
+import { useEffect, useMemo, useState } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { Check, CheckCircle2, Download, UserPlus, X } from "lucide-react";
+import Sidebar from "./Sidebar.jsx";
+import TopNavbar from "./TopNavbar.jsx";
 
-const pageTitles = {
-  '/': 'Dashboard',
-  '/employees': 'Employees',
-  '/onboarding': 'Onboarding',
-  '/offboarding': 'Offboarding',
-  '/equipment': 'Equipment Inventory',
-  '/department-access': 'Department Access',
-  '/access-requests': 'Access Requests',
-  '/notifications': 'Notifications',
-  '/reports': 'Reports',
-  '/settings': 'Settings'
-};
+const INITIAL_EMPLOYEES = [
+  { id:"emp-1", name:"Emily Carter", role:"UX Designer", department:"Design", email:"emily.carter@journeyone.com", avatar:"https://i.pravatar.cc/100?img=47", type:"onboarding", startLabel:"Starts Jul 28", startDate:"2026-07-28", progress:60, nextStep:{label:"Assign Laptop",icon:"laptop",due:"Today"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Provision accounts",done:true},{id:"s4",label:"Assign laptop",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
+  { id:"emp-2", name:"Marcus Lee", role:"Software Engineer", department:"Engineering", email:"marcus.lee@journeyone.com", avatar:"https://i.pravatar.cc/100?img=12", type:"onboarding", startLabel:"Starts Jul 29", startDate:"2026-07-29", progress:40, nextStep:{label:"Approve Access",icon:"shield",due:"Tomorrow"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Approve system access",done:false},{id:"s4",label:"Assign equipment",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
+  { id:"emp-3", name:"Ava Patel", role:"Marketing Associate", department:"Marketing", email:"ava.patel@journeyone.com", avatar:"https://i.pravatar.cc/100?img=32", type:"onboarding", startLabel:"Starts Aug 2", startDate:"2026-08-02", progress:20, nextStep:{label:"Upload Documents",icon:"file",due:"2 days"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Upload signed documents",done:false},{id:"s3",label:"Approve system access",done:false},{id:"s4",label:"Assign equipment",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
+  { id:"emp-4", name:"Daniel Brooks", role:"IT Support Specialist", department:"Information Technology", email:"daniel.brooks@journeyone.com", avatar:"https://i.pravatar.cc/100?img=51", type:"offboarding", startLabel:"Last Day: May 30", startDate:"2026-05-30", progress:80, nextStep:{label:"Collect Equipment",icon:"mail",due:"Today"}, steps:[{id:"s1",label:"Revoke system access",done:true},{id:"s2",label:"Transfer ownership of files",done:true},{id:"s3",label:"Exit interview",done:true},{id:"s4",label:"Collect badge & equipment",done:false},{id:"s5",label:"Final paycheck processed",done:false}]}
+];
+const INITIAL_TASKS=[
+{id:"task-1",label:"Assign laptop for Emily Carter",subLabel:"Onboarding",priority:"High",icon:"laptop",done:false},
+{id:"task-2",label:"Approve access for Marcus Lee",subLabel:"Onboarding",priority:"Medium",icon:"shield",done:false},
+{id:"task-3",label:"Collect badge from Daniel Brooks",subLabel:"Offboarding",priority:"High",icon:"briefcase",done:false},
+{id:"task-4",label:"Review documents for Ava Patel",subLabel:"Onboarding",priority:"Low",icon:"file-text",done:false}];
+const INITIAL_ACCESS=[
+{id:"acc-1",name:"Marcus Lee",avatar:"https://i.pravatar.cc/100?img=12",system:"GitHub – Engineering Org",requested:"Jul 20, 2026",status:"Pending"},
+{id:"acc-2",name:"Ava Patel",avatar:"https://i.pravatar.cc/100?img=32",system:"Marketing Analytics Suite",requested:"Jul 19, 2026",status:"Pending"},
+{id:"acc-3",name:"Emily Carter",avatar:"https://i.pravatar.cc/100?img=47",system:"Figma – Design Team",requested:"Jul 18, 2026",status:"Approved"}];
+const INITIAL_DATES=[
+{id:"date-1",month:"JUL",day:"28",title:"Emily Carter — First Day",subtitle:"UX Designer",badge:"In 2 days"},
+{id:"date-2",month:"JUL",day:"29",title:"Marcus Lee — First Day",subtitle:"Software Engineer",badge:"In 3 days"},
+{id:"date-3",month:"AUG",day:"02",title:"Ava Patel — First Day",subtitle:"Marketing Associate",badge:"In 7 days"},
+{id:"date-4",month:"MAY",day:"30",title:"Daniel Brooks — Last Day",subtitle:"IT Support Specialist",badge:"Today"}];
+const INITIAL_EQUIPMENT=[
+{id:"eq-1",item:'MacBook Pro 14"',assetTag:"JO-1042",assignedTo:"Emily Carter",status:"Pending Assignment"},
+{id:"eq-2",item:"Dell XPS 15",assetTag:"JO-1088",assignedTo:"Marcus Lee",status:"Assigned"},
+{id:"eq-3",item:"iPhone 15",assetTag:"JO-2026",assignedTo:"Ava Patel",status:"Pending Assignment"},
+{id:"eq-4",item:"Badge #4471",assetTag:"BADGE-4471",assignedTo:"Daniel Brooks",status:"To Be Collected"}];
+const INITIAL_NOTIFICATIONS=[
+{id:"n1",text:"Marcus Lee requested access to GitHub",time:"10m ago",read:false},
+{id:"n2",text:"Emily Carter's documents were approved",time:"1h ago",read:false},
+{id:"n3",text:"Daniel Brooks's offboarding starts today",time:"3h ago",read:false}];
+const INITIAL_DEPARTMENTS=[
+{id:"dep-1",name:"Engineering",systems:["GitHub","Jira","AWS","Slack"],color:"#7a1130"},
+{id:"dep-2",name:"Design",systems:["Figma","Adobe Creative Cloud","Slack"],color:"#c9922f"},
+{id:"dep-3",name:"Marketing",systems:["HubSpot","Analytics Suite","Canva"],color:"#2c8a4b"},
+{id:"dep-4",name:"Information Technology",systems:["Microsoft 365 Admin","Okta","Service Desk"],color:"#5b5bd6"}];
 
-function Layout() {
-  const location = useLocation();
-  const title = pageTitles[location.pathname] || 'Dashboard';
+function load(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fallback}catch{return fallback}}
+function Modal({title,subtitle,onClose,children,width}){return <div className="modal-overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><div className="modal-box" style={width?{maxWidth:width}:undefined}><div className="modal-head"><h3>{title}</h3><button className="modal-close" onClick={onClose}><X/></button></div>{subtitle&&<p className="modal-sub">{subtitle}</p>}{children}</div></div>}
+function NewJourneyModal({type,onClose,onSubmit}){const [name,setName]=useState("");const [role,setRole]=useState("");const [department,setDepartment]=useState("");const [date,setDate]=useState("");const onboarding=type==="onboarding";return <Modal title={onboarding?"Start Onboarding Process":"Start Offboarding"} subtitle={onboarding?"Add a new employee and kick off their onboarding journey.":"Begin the offboarding process for a departing employee."} onClose={onClose}><form onSubmit={e=>{e.preventDefault();if(name.trim()&&role.trim()&&date)onSubmit({name:name.trim(),role:role.trim(),department:department||"General",date})}}><div className="field"><label>Employee name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Priya Sharma" required/></div><div className="field"><label>Role / Title</label><input value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Designer" required/></div><div className="field"><label>Department</label><input value={department} onChange={e=>setDepartment(e.target.value)} placeholder="e.g. Design"/></div><div className="field"><label>{onboarding?"Start date":"Last day"}</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} required/></div><div className="modal-actions"><button type="button" className="btn-secondary" onClick={onClose}>Cancel</button><button className="btn-primary"><UserPlus/>{onboarding?"Start Onboarding":"Start Offboarding"}</button></div></form></Modal>}
+function EmployeeDetailModal({employee,onClose,onToggleStep}){if(!employee)return null;const progress=Math.round(employee.steps.filter(s=>s.done).length/employee.steps.length*100);return <Modal title={employee.name} subtitle={`${employee.role} · ${employee.startLabel}`} onClose={onClose}><div className="progress-block"><div className="label">Journey progress</div><div className="progress-bar-row"><div className="progress-track"><div className={`progress-fill ${employee.type==="offboarding"?"offboarding":""}`} style={{width:`${progress}%`}}/></div><span className="progress-pct">{progress}%</span></div></div><div className="step-checklist">{employee.steps.map(s=><button key={s.id} className={`step-item ${s.done?"done":""}`} onClick={()=>onToggleStep(employee.id,s.id)}><span className="dot">{s.done&&<Check/>}</span>{s.label}</button>)}</div><div className="modal-actions"><button className="btn-secondary" onClick={onClose}>Close</button></div></Modal>}
+function ReportModal({onClose,employees,tasks,accessRequests}){const [type,setType]=useState("onboarding");function dl(){let rows=[],name="report.csv";if(type==="onboarding"){rows=employees.filter(e=>e.type==="onboarding").map(e=>({Name:e.name,Role:e.role,Start:e.startLabel,Progress:`${e.progress}%`}));name="onboarding-report.csv"}else if(type==="offboarding"){rows=employees.filter(e=>e.type==="offboarding").map(e=>({Name:e.name,Role:e.role,LastDay:e.startLabel,Progress:`${e.progress}%`}));name="offboarding-report.csv"}else if(type==="tasks"){rows=tasks.map(t=>({Task:t.label,Category:t.subLabel,Priority:t.priority,Status:t.done?"Done":"Open"}));name="tasks-report.csv"}else{rows=accessRequests.map(a=>({Name:a.name,System:a.system,Requested:a.requested,Status:a.status}));name="access-requests-report.csv"}const headers=rows.length?Object.keys(rows[0]):[];const csv=[headers.join(","),...rows.map(r=>headers.map(h=>`"${String(r[h]).replace(/"/g,'""')}"`).join(","))].join("\n");const blob=new Blob([csv],{type:"text/csv"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);onClose(name)}return <Modal title="Generate Report" subtitle="Choose a report to create and download as CSV." onClose={()=>onClose()}><div className="field"><label>Report type</label><select value={type} onChange={e=>setType(e.target.value)}><option value="onboarding">Onboarding summary</option><option value="offboarding">Offboarding summary</option><option value="tasks">Task list</option><option value="access">Access requests</option></select></div><div className="modal-actions"><button className="btn-secondary" onClick={()=>onClose()}>Cancel</button><button className="btn-primary" onClick={dl}><Download/>Download CSV</button></div></Modal>}
+function HowModal({onClose}){return <Modal title="How JourneyOne works" subtitle="A simple workflow behind every hire and every exit." onClose={onClose} width={480}><div className="step-checklist">{["Start a journey","Coordinate access and equipment","Track every required step","Export reports for stakeholders"].map((x,i)=><div className="step-item" key={x}><span className="dot done-dot">{i+1}</span><div><strong>{x}</strong></div></div>)}</div><div className="modal-actions"><button className="btn-primary full" onClick={onClose}>Got it</button></div></Modal>}
 
-  return (
-    <div className="app-shell">
-      <Sidebar />
-      <div className="main-shell">
-        <TopNavbar title={title} />
-        <main className="page-content">
-          <Outlet />
-        </main>
-      </div>
-    </div>
-  );
+export default function Layout(){
+ const nav=useNavigate();
+ const [employees,setEmployees]=useState(()=>load("jo-employees",INITIAL_EMPLOYEES));
+ const [tasks,setTasks]=useState(()=>load("jo-tasks",INITIAL_TASKS));
+ const [accessRequests,setAccessRequests]=useState(()=>load("jo-access",INITIAL_ACCESS));
+ const [equipment,setEquipment]=useState(()=>load("jo-equipment",INITIAL_EQUIPMENT));
+ const [notifications,setNotifications]=useState(()=>load("jo-notifications",INITIAL_NOTIFICATIONS));
+ const [departments,setDepartments]=useState(()=>load("jo-departments",INITIAL_DEPARTMENTS));
+ const [currentUser,setCurrentUser]=useState(()=>load("jo-user",{name:"Sarah Ahmed",firstName:"Sarah",title:"IT Manager",avatar:"https://i.pravatar.cc/100?img=45"}));
+ const [modal,setModal]=useState(null);const [toast,setToast]=useState("");
+ useEffect(()=>{localStorage.setItem("jo-employees",JSON.stringify(employees))},[employees]);
+ useEffect(()=>{localStorage.setItem("jo-tasks",JSON.stringify(tasks))},[tasks]);
+ useEffect(()=>{localStorage.setItem("jo-access",JSON.stringify(accessRequests))},[accessRequests]);
+ useEffect(()=>{localStorage.setItem("jo-equipment",JSON.stringify(equipment))},[equipment]);
+ useEffect(()=>{localStorage.setItem("jo-notifications",JSON.stringify(notifications))},[notifications]);
+ useEffect(()=>{localStorage.setItem("jo-departments",JSON.stringify(departments))},[departments]);
+ useEffect(()=>{localStorage.setItem("jo-user",JSON.stringify(currentUser))},[currentUser]);
+ function flash(message){setToast(message);setTimeout(()=>setToast(""),2500)}
+ function openEmployee(e){setModal({type:"employee",payload:e})}
+ function toggleStep(empId,stepId){setEmployees(prev=>prev.map(e=>{if(e.id!==empId)return e;const steps=e.steps.map(s=>s.id===stepId?{...s,done:!s.done}:s);return {...e,steps,progress:Math.round(steps.filter(s=>s.done).length/steps.length*100)}}));setModal(m=>m?.type==="employee"?{...m,payload:{...m.payload,steps:m.payload.steps.map(s=>s.id===stepId?{...s,done:!s.done}:s)}}:m)}
+ function createJourney(type,{name,role,department,date}){const id=`emp-${Date.now()}`;const formatted=new Date(date+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"});const steps=type==="onboarding"?["Send offer & welcome email","Collect signed documents","Provision accounts","Assign equipment","Schedule first-day orientation"]:["Revoke system access","Transfer ownership of files","Exit interview","Collect badge & equipment","Final paycheck processed"];setEmployees(p=>[{id,name,role,department,email:`${name.toLowerCase().replace(/\s+/g,'.')}@journeyone.com`,avatar:`https://i.pravatar.cc/100?u=${id}`,type,startLabel:type==="onboarding"?`Starts ${formatted}`:`Last Day: ${formatted}`,startDate:date,progress:0,nextStep:{label:type==="onboarding"?"Send Welcome Email":"Revoke Access",icon:type==="onboarding"?"mail":"shield",due:"Today"},steps:steps.map((label,i)=>({id:`s${i+1}`,label,done:false}))},...p]);setModal(null);flash(`${type==="onboarding"?"Onboarding":"Offboarding"} started for ${name}.`)}
+ const ctx={employees,tasks,accessRequests,equipment,dates:INITIAL_DATES,notifications,departments,currentUser,navigate:nav,openEmployee,startOnboarding:()=>setModal({type:"new-onboarding"}),startOffboarding:()=>setModal({type:"new-offboarding"}),generateReport:()=>setModal({type:"report"}),showHow:()=>setModal({type:"how"}),toggleTask:id=>setTasks(p=>p.map(t=>t.id===id?{...t,done:!t.done}:t)),decideAccess:(id,status)=>{setAccessRequests(p=>p.map(r=>r.id===id?{...r,status}:r));flash(`Access request ${status.toLowerCase()}.`)},markEquipment:(id,status="Assigned")=>{setEquipment(p=>p.map(e=>e.id===id?{...e,status}:e));flash("Equipment status updated.")},addEquipment:item=>setEquipment(p=>[{id:`eq-${Date.now()}`,...item},...p]),markNotification:id=>setNotifications(p=>p.map(n=>n.id===id?{...n,read:true}:n)),markAllNotifications:()=>setNotifications(p=>p.map(n=>({...n,read:true}))),setDepartments,saveUser:({name,title})=>setCurrentUser(u=>({...u,name,title,firstName:name.split(" ")[0]})),flash};
+ return <div className="app-shell"><Sidebar currentUser={currentUser}/><main className="main"><TopNavbar {...ctx}/><Outlet context={ctx}/></main>{modal?.type==="new-onboarding"&&<NewJourneyModal type="onboarding" onClose={()=>setModal(null)} onSubmit={d=>createJourney("onboarding",d)}/>} {modal?.type==="new-offboarding"&&<NewJourneyModal type="offboarding" onClose={()=>setModal(null)} onSubmit={d=>createJourney("offboarding",d)}/>} {modal?.type==="employee"&&<EmployeeDetailModal employee={employees.find(e=>e.id===modal.payload.id)||modal.payload} onClose={()=>setModal(null)} onToggleStep={toggleStep}/>} {modal?.type==="report"&&<ReportModal employees={employees} tasks={tasks} accessRequests={accessRequests} onClose={f=>{setModal(null);if(f)flash(`Downloaded ${f}`)}}/>} {modal?.type==="how"&&<HowModal onClose={()=>setModal(null)}/>} {toast&&<div className="toast"><CheckCircle2/>{toast}</div>}</div>
 }
-
-export default Layout;

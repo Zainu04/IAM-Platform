@@ -1,17 +1,1 @@
-import PageShell from '../components/PageShell.jsx';
-
-function Offboarding() {
-  return (
-    <PageShell pageName="Offboarding" owner="Zainab">
-      <div className="starter-note">
-        <h3>Zainab: build the Offboarding page here</h3>
-        <p>This file is intentionally a starter shell. Use the wireframe and development guide to build this page's UI.</p>
-        <ul>
-          <li>Create the offboarding checklist, access removal steps, equipment return section, and final review.</li>
-        </ul>
-      </div>
-    </PageShell>
-  );
-}
-
-export default Offboarding;
+import {useOutletContext} from "react-router-dom";import {LogOut,ChevronRight} from "lucide-react";export default function Offboarding(){const c=useOutletContext(),list=c.employees.filter(e=>e.type==="offboarding");return <div><div className="page-header"><div><h2>Offboarding</h2><p>{list.length} active offboarding journeys.</p></div><button className="btn-primary" onClick={c.startOffboarding}><LogOut/>Start Offboarding</button></div><div className="card">{list.map(e=><div className="journey-row" key={e.id}><div className="person"><img src={e.avatar}/><div><strong>{e.name}</strong><div className="role">{e.role}</div><span className="pill rose">{e.startLabel}</span></div></div><div className="progress-block"><div className="label">Overall Progress</div><div className="progress-bar-row"><div className="progress-track"><div className="progress-fill offboarding" style={{width:`${e.progress}%`}}/></div><span className="progress-pct">{e.progress}%</span></div></div><div className="next-step"><div className="label"><span>Next Step</span><span className="due">Due {e.nextStep.due}</span></div><div className="step-line">{e.nextStep.label}</div></div><button className="row-chevron" onClick={()=>c.openEmployee(e)}><ChevronRight/></button></div>)}{!list.length&&<div className="empty-state">No offboarding journeys yet.</div>}</div></div>}
