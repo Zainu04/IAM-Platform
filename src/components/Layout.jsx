@@ -3,6 +3,8 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { Check, CheckCircle2, Download, UserPlus, X } from "lucide-react";
 import Sidebar from "./Sidebar.jsx";
 import TopNavbar from "./TopNavbar.jsx";
+import { safeApi } from "../services/api.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const INITIAL_EMPLOYEES = [
   { id:"emp-1", name:"Emily Carter", role:"UX Designer", department:"Design", email:"emily.carter@journeyone.com", avatar:"https://i.pravatar.cc/100?img=47", type:"onboarding", startLabel:"Starts Jul 28", startDate:"2026-07-28", progress:60, nextStep:{label:"Assign Laptop",icon:"laptop",due:"Today"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Provision accounts",done:true},{id:"s4",label:"Assign laptop",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
@@ -11,10 +13,10 @@ const INITIAL_EMPLOYEES = [
   { id:"emp-4", name:"Daniel Brooks", role:"IT Support Specialist", department:"Information Technology", email:"daniel.brooks@journeyone.com", avatar:"https://i.pravatar.cc/100?img=51", type:"offboarding", startLabel:"Last Day: May 30", startDate:"2026-05-30", progress:80, nextStep:{label:"Collect Equipment",icon:"mail",due:"Today"}, steps:[{id:"s1",label:"Revoke system access",done:true},{id:"s2",label:"Transfer ownership of files",done:true},{id:"s3",label:"Exit interview",done:true},{id:"s4",label:"Collect badge & equipment",done:false},{id:"s5",label:"Final paycheck processed",done:false}]}
 ];
 const INITIAL_TASKS=[
-{id:"task-1",label:"Assign laptop for Emily Carter",subLabel:"Onboarding",priority:"High",icon:"laptop",done:false},
-{id:"task-2",label:"Approve access for Marcus Lee",subLabel:"Onboarding",priority:"Medium",icon:"shield",done:false},
-{id:"task-3",label:"Collect badge from Daniel Brooks",subLabel:"Offboarding",priority:"High",icon:"briefcase",done:false},
-{id:"task-4",label:"Review documents for Ava Patel",subLabel:"Onboarding",priority:"Low",icon:"file-text",done:false}];
+{id:"task-1",employeeId:"emp-1",actionType:"EQUIPMENT_ASSIGNED",label:"Assign laptop for Emily Carter",subLabel:"Onboarding",priority:"High",icon:"laptop",assignedRole:"IT Manager",dueDate:"2026-07-26",status:"OPEN",done:false},
+{id:"task-2",employeeId:"emp-2",actionType:"ACCESS_PROVISIONED",label:"Approve access for Marcus Lee",subLabel:"Onboarding",priority:"Medium",icon:"shield",assignedRole:"IT Manager",dueDate:"2026-07-27",status:"OPEN",done:false},
+{id:"task-3",employeeId:"emp-4",actionType:"EQUIPMENT_COLLECTED",label:"Collect badge from Daniel Brooks",subLabel:"Offboarding",priority:"High",icon:"briefcase",assignedRole:"IT Manager",dueDate:"2026-05-30",status:"OPEN",done:false},
+{id:"task-4",employeeId:"emp-3",actionType:"DOCUMENTS_APPROVED",label:"Review documents for Ava Patel",subLabel:"Onboarding",priority:"Low",icon:"file-text",assignedRole:"HR Manager",dueDate:"2026-07-28",status:"OPEN",done:false}];
 const INITIAL_ACCESS=[
 {id:"acc-1",name:"Marcus Lee",avatar:"https://i.pravatar.cc/100?img=12",system:"GitHub – Engineering Org",requested:"Jul 20, 2026",status:"Pending"},
 {id:"acc-2",name:"Ava Patel",avatar:"https://i.pravatar.cc/100?img=32",system:"Marketing Analytics Suite",requested:"Jul 19, 2026",status:"Pending"},
@@ -237,6 +239,7 @@ function HowModal({onClose}){return <Modal title="How JourneyOne works" subtitle
 
 export default function Layout() {
   const navigate = useNavigate();
+  const { user: authenticatedUser, logout } = useAuth();
   const [employees, setEmployees] = useState(() =>
     normalizeEmployees(load("jo-employees", INITIAL_EMPLOYEES))
   );
@@ -253,16 +256,23 @@ export default function Layout() {
   const [departments, setDepartments] = useState(() =>
     load("jo-departments", INITIAL_DEPARTMENTS)
   );
-  const [currentUser, setCurrentUser] = useState(() =>
-    load("jo-user", {
-      name: "Zainab Akhtar",
-      firstName: "Zainab",
-      title: "IT Manager",
-      avatar: "https://i.pravatar.cc/100?img=45",
-    })
-  );
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = load("jo-user", null);
+    const source = authenticatedUser || saved || {
+      name: "JourneyOne User",
+      title: "Team Member",
+      role: "TEAM_MEMBER",
+    };
+    return {
+      ...source,
+      firstName: source.name?.split(" ")[0] || "Team",
+      avatar: source.avatar || null,
+    };
+  });
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
+  const [auditLogs, setAuditLogs] = useState(() => load("jo-audit", []));
+  const [systemMode, setSystemMode] = useState("Local demo");
 
   useEffect(() => {
     localStorage.setItem("jo-employees", JSON.stringify(employees));
@@ -285,6 +295,126 @@ export default function Layout() {
   useEffect(() => {
     localStorage.setItem("jo-user", JSON.stringify(currentUser));
   }, [currentUser]);
+  useEffect(() => { localStorage.setItem("jo-audit", JSON.stringify(auditLogs)); }, [auditLogs]);
+  useEffect(() => { safeApi("/health").then((result) => result && setSystemMode("API connected")); }, []);
+
+  useEffect(() => {
+    const migrationKey = "jo-it-demo-journeys-v3";
+    if (localStorage.getItem(migrationKey)) return;
+
+    const demoEmployees = [
+      {
+        id: "emp-blaire-willow", profileId: "profile-blaire-willow", name: "Blaire Willow",
+        role: "Product Designer", department: "Design", email: "blaire.willow@journeyone.com",
+        avatar: "https://i.pravatar.cc/100?u=blaire-willow", type: "onboarding",
+        startLabel: "Starts Jul 30", startDate: "2026-07-30",
+        steps: [
+          { id: "send-welcome", done: true }, { id: "collect-documents", done: true },
+          { id: "provision-access", done: true }, { id: "assign-equipment", done: false },
+          { id: "schedule-orientation", done: false },
+        ],
+      },
+      {
+        id: "emp-elizabeth-melody", profileId: "profile-elizabeth-melody", name: "Elizabeth Melody",
+        role: "Financial Analyst", department: "Finance", email: "elizabeth.melody@journeyone.com",
+        avatar: "https://i.pravatar.cc/100?u=elizabeth-melody", type: "onboarding",
+        startLabel: "Starts Jul 31", startDate: "2026-07-31",
+        steps: [
+          { id: "send-welcome", done: true }, { id: "collect-documents", done: true },
+          { id: "provision-access", done: false }, { id: "assign-equipment", done: false },
+          { id: "schedule-orientation", done: false },
+        ],
+      },
+      {
+        id: "emp-carter-johnson", profileId: "profile-carter-johnson", name: "Carter Johnson",
+        role: "Operations Coordinator", department: "Operations", email: "carter.johnson@journeyone.com",
+        avatar: "https://i.pravatar.cc/100?u=carter-johnson", type: "onboarding",
+        startLabel: "Starts Aug 1", startDate: "2026-08-01",
+        steps: [
+          { id: "send-welcome", done: true }, { id: "collect-documents", done: true },
+          { id: "provision-access", done: false }, { id: "assign-equipment", done: false },
+          { id: "schedule-orientation", done: false },
+        ],
+      },
+    ];
+
+    setEmployees((previous) => normalizeEmployees([
+      ...previous,
+      ...demoEmployees.filter((demo) => !previous.some((employee) => employee.id === demo.id || employee.email === demo.email)),
+    ]));
+
+    const demoTasks = [
+      {
+        id: "task-blaire-equipment", employeeId: "emp-blaire-willow", actionType: "EQUIPMENT_ASSIGNED",
+        label: "Assign MacBook Pro to Blaire Willow", subLabel: "Onboarding", priority: "High",
+        assignedRole: "IT Manager", dueDate: "2026-07-22", status: "OPEN", done: false, icon: "laptop",
+        targetPath: "/equipment?focus=Blaire%20Willow",
+      },
+      {
+        id: "task-elizabeth-account", employeeId: "emp-elizabeth-melody", actionType: "ACCESS_PROVISIONED",
+        label: "Create employee account for Elizabeth Melody", subLabel: "Onboarding", priority: "High",
+        assignedRole: "IT Manager", dueDate: "2026-07-22", status: "OPEN", done: false, icon: "key",
+        targetPath: "/accounts?focus=emp-elizabeth-melody",
+      },
+      {
+        id: "task-carter-access", employeeId: "emp-carter-johnson", actionType: "ACCESS_REQUEST_REVIEW",
+        label: "Review Microsoft 365 access for Carter Johnson", subLabel: "Onboarding", priority: "Medium",
+        assignedRole: "IT Manager", dueDate: "2026-07-23", status: "OPEN", done: false, icon: "shield",
+        targetPath: "/access-requests?focus=acc-carter-m365",
+      },
+    ];
+    setTasks((previous) => [
+      ...demoTasks.filter((demo) => !previous.some((task) => task.id === demo.id)),
+      ...previous,
+    ]);
+
+    const demoEquipment = {
+      id: "eq-blaire-macbook", item: 'MacBook Pro 14" M4', assetTag: "JO-2148",
+      assignedTo: "Blaire Willow", status: "Pending Assignment",
+    };
+    setEquipment((previous) => previous.some((item) => item.id === demoEquipment.id) ? previous : [demoEquipment, ...previous]);
+
+    const demoAccess = {
+      id: "acc-carter-m365", name: "Carter Johnson", avatar: "https://i.pravatar.cc/100?u=carter-johnson",
+      system: "Microsoft 365", requested: "Jul 22, 2026", status: "Pending",
+    };
+    setAccessRequests((previous) => previous.some((request) => request.id === demoAccess.id) ? previous : [demoAccess, ...previous]);
+
+    localStorage.setItem(migrationKey, "complete");
+  }, []);
+
+  function recordAudit(action, resourceType, resourceId, details = {}) {
+    setAuditLogs((previous) => [{
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      actorName: currentUser.name, actorRole: currentUser.title, action, resourceType, resourceId, details,
+      createdAt: new Date().toISOString(),
+    }, ...previous]);
+  }
+
+  function completeTaskFor(employeeId, actionType) {
+    setTasks((previous) => previous.map((task) =>
+      task.employeeId === employeeId && task.actionType === actionType
+        ? { ...task, done: true, status: "COMPLETED", completedAt: new Date().toISOString(), completedBy: currentUser.name }
+        : task
+    ));
+  }
+
+  function createTasksForJourney(employee) {
+    const actionByStep = {
+      "send-welcome":"WELCOME_SENT", "collect-documents":"DOCUMENTS_APPROVED", "provision-access":"ACCESS_PROVISIONED",
+      "assign-equipment":"EQUIPMENT_ASSIGNED", "schedule-orientation":"ORIENTATION_SCHEDULED", "notify-teams":"TEAMS_NOTIFIED",
+      "revoke-access":"ACCESS_REVOKED", "transfer-files":"FILES_TRANSFERRED", "collect-equipment":"EQUIPMENT_COLLECTED",
+      "exit-interview":"EXIT_INTERVIEW_COMPLETED", "archive-employee":"EMPLOYEE_ARCHIVED"
+    };
+    const ownerByAction = { WELCOME_SENT:"HR Manager", DOCUMENTS_APPROVED:"HR Manager", ACCESS_PROVISIONED:"IT Manager", EQUIPMENT_ASSIGNED:"IT Manager", ORIENTATION_SCHEDULED:"HR Manager", TEAMS_NOTIFIED:"HR Manager", ACCESS_REVOKED:"IT Manager", FILES_TRANSFERRED:"HR Manager", EQUIPMENT_COLLECTED:"IT Manager", EXIT_INTERVIEW_COMPLETED:"HR Manager", EMPLOYEE_ARCHIVED:"HR Manager" };
+    const newTasks = employee.steps.map((step, index) => ({
+      id:`task-${Date.now()}-${index}`, employeeId:employee.id, actionType:actionByStep[step.id],
+      label:`${step.label} for ${employee.name}`, subLabel:employee.type === "onboarding" ? "Onboarding" : "Offboarding",
+      priority:index < 2 ? "High" : index < 4 ? "Medium" : "Low", assignedRole:ownerByAction[actionByStep[step.id]],
+      dueDate:employee.startDate, status:"OPEN", done:false, icon:step.icon || "file-text"
+    }));
+    setTasks((previous) => [...newTasks, ...previous]);
+  }
 
   function flash(message) {
     setToast(message);
@@ -393,6 +523,11 @@ export default function Layout() {
       ]);
     }
 
+    const onboardingAction = {"send-welcome":"WELCOME_SENT","collect-documents":"DOCUMENTS_APPROVED","provision-access":"ACCESS_PROVISIONED","assign-equipment":"EQUIPMENT_ASSIGNED","schedule-orientation":"ORIENTATION_SCHEDULED"}[stepId];
+    if (onboardingAction) completeTaskFor(employeeId, onboardingAction);
+    recordAudit("WORKFLOW_STEP_COMPLETED", "employee", employeeId, { stepId, workflow: "onboarding" });
+    safeApi(`/employees/${employeeId}/steps/${stepId}`, { method:"PATCH", body:JSON.stringify({ details }) });
+
     setNotifications((previous) => [
       {
         id: `n-${Date.now()}`,
@@ -456,6 +591,11 @@ export default function Layout() {
         )
       );
     }
+
+    const offboardingAction = {"notify-teams":"TEAMS_NOTIFIED","revoke-access":"ACCESS_REVOKED","transfer-files":"FILES_TRANSFERRED","collect-equipment":"EQUIPMENT_COLLECTED","exit-interview":"EXIT_INTERVIEW_COMPLETED","archive-employee":"EMPLOYEE_ARCHIVED"}[stepId];
+    if (offboardingAction) completeTaskFor(employeeId, offboardingAction);
+    recordAudit("WORKFLOW_STEP_COMPLETED", "employee", employeeId, { stepId, workflow: "offboarding" });
+    safeApi(`/employees/${employeeId}/steps/${stepId}`, { method:"PATCH", body:JSON.stringify({ details }) });
 
     setNotifications((previous) => [
       {
@@ -561,6 +701,9 @@ export default function Layout() {
     }
 
     setEmployees((previous) => [employee, ...previous]);
+    createTasksForJourney(employee);
+    recordAudit("EMPLOYEE_JOURNEY_CREATED", "employee", employee.id, { type });
+    safeApi("/employees", { method:"POST", body:JSON.stringify(employee) });
     setModal(null);
     flash(`${type === "onboarding" ? "Onboarding" : "Offboarding"} started for ${name}.`);
 
@@ -580,6 +723,8 @@ export default function Layout() {
     notifications,
     departments,
     currentUser,
+    auditLogs,
+    systemMode,
     navigate,
     openEmployee,
     completeOnboardingStep,
@@ -590,31 +735,70 @@ export default function Layout() {
       setModal({ type: "new-offboarding", payload: employee }),
     generateReport: () => setModal({ type: "report" }),
     showHow: () => setModal({ type: "how" }),
-    toggleTask: (id) =>
-      setTasks((previous) =>
-        previous.map((task) =>
-          task.id === id ? { ...task, done: !task.done } : task
-        )
-      ),
-    decideAccess: (id, status) => {
-      setAccessRequests((previous) =>
-        previous.map((request) =>
-          request.id === id ? { ...request, status } : request
-        )
-      );
+    toggleTask: (id) => {
+      const task = tasks.find((item) => item.id === id);
+      if (!task?.done) { flash("This task completes automatically when its related action is finished."); return; }
+      flash("Completed tasks are locked to preserve the audit trail.");
+    },
+    decideAccess: (id, status, reason = "") => {
+      const request = accessRequests.find((item) => item.id === id);
+      setAccessRequests((previous) => previous.map((item) => item.id === id ? { ...item, status, reason, decidedAt:new Date().toISOString(), decidedBy:currentUser.name } : item));
+      if (status === "Approved" && request) {
+        const employee = employees.find((item) => item.name === request.name);
+        if (employee) {
+          completeTaskFor(employee.id, "ACCESS_PROVISIONED");
+          completeTaskFor(employee.id, "ACCESS_REQUEST_REVIEW");
+        }
+      }
+      recordAudit("ACCESS_REQUEST_DECIDED", "accessRequest", id, { status, reason });
+      safeApi(`/access-requests/${id}`, { method:"PATCH", body:JSON.stringify({ status, reason }) });
       flash(`Access request ${status.toLowerCase()}.`);
     },
     markEquipment: (id, status = "Assigned") => {
-      setEquipment((previous) =>
-        previous.map((item) => (item.id === id ? { ...item, status } : item))
-      );
-      flash("Equipment status updated.");
+      const item = equipment.find((entry) => entry.id === id);
+      setEquipment((previous) => previous.map((entry) => entry.id === id ? { ...entry, status, handledAt:new Date().toISOString() } : entry));
+      const employee = employees.find((entry) => entry.name === item?.assignedTo);
+      if (employee) completeTaskFor(employee.id, status === "Available" ? "EQUIPMENT_COLLECTED" : "EQUIPMENT_ASSIGNED");
+      recordAudit("EQUIPMENT_STATUS_UPDATED", "equipment", id, { status, employeeId:employee?.id });
+      if (item && employee) safeApi(`/equipment/${id}/${status === "Available" ? "return" : "assign"}`, { method:"POST", body:JSON.stringify({ employeeId:employee.id, employeeName:employee.name }) });
+      flash("Equipment status updated and related task completed.");
     },
     addEquipment: (item) =>
       setEquipment((previous) => [
         { id: `eq-${Date.now()}`, ...item },
         ...previous,
       ]),
+    updateEmployeeAccount: (employeeId, updates) => {
+      let updatedName = null;
+      setEmployees((previous) => previous.map((employee) => {
+        if (employee.id !== employeeId) return employee;
+        updatedName = updates.name || employee.name;
+        return { ...employee, ...updates };
+      }));
+      completeTaskFor(employeeId, "ACCESS_PROVISIONED");
+      recordAudit("ACCOUNT_UPDATED", "employee", employeeId, updates);
+      safeApi(`/employees/${employeeId}/account`, { method: "PATCH", body: JSON.stringify(updates) });
+      flash(`Account updated for ${updatedName || "employee"}.`);
+    },
+    toggleAccountStatus: (employeeId) => {
+      let nextStatus = "Active";
+      let employeeName = "employee";
+      setEmployees((previous) => previous.map((employee) => {
+        if (employee.id !== employeeId) return employee;
+        nextStatus = (employee.accountStatus || "Active") === "Active" ? "Disabled" : "Active";
+        employeeName = employee.name;
+        return { ...employee, accountStatus: nextStatus };
+      }));
+      recordAudit("ACCOUNT_STATUS_CHANGED", "employee", employeeId, { status: nextStatus });
+      safeApi(`/employees/${employeeId}/account`, { method: "PATCH", body: JSON.stringify({ accountStatus: nextStatus }) });
+      flash(`${employeeName}'s account is now ${nextStatus.toLowerCase()}.`);
+    },
+    resetAccountPassword: (employeeId) => {
+      const employee = employees.find((item) => item.id === employeeId);
+      recordAudit("ACCOUNT_PASSWORD_RESET", "employee", employeeId, {});
+      safeApi(`/employees/${employeeId}/account/reset-password`, { method: "POST" });
+      flash(`Temporary password sent to ${employee?.email || "the employee"}.`);
+    },
     markNotification: (id) =>
       setNotifications((previous) =>
         previous.map((notification) =>
@@ -633,7 +817,13 @@ export default function Layout() {
         title,
         firstName: name.split(" ")[0],
       })),
-    signOut: () => flash("You have been signed out of this demo."),
+    signOut: () => { logout(); navigate("/login", { replace: true }); },
+    permissions: {
+      canManageEmployees:["IT_MANAGER","HR_MANAGER"].includes(authenticatedUser?.role),
+      canManageEquipment:authenticatedUser?.role === "IT_MANAGER",
+      canAudit:["IT_MANAGER","HR_MANAGER","AUDITOR"].includes(authenticatedUser?.role),
+    },
+    recordAudit,
     flash,
   };
 

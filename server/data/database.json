@@ -1,0 +1,35 @@
+{
+  "users": [
+    {
+      "id": "user-1",
+      "name": "Zainab Akhtar",
+      "email": "zainab@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "IT_MANAGER",
+      "title": "IT Manager"
+    },
+    {
+      "id": "user-2",
+      "name": "Hannah Reyes",
+      "email": "hr@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "HR_MANAGER",
+      "title": "HR Manager"
+    },
+    {
+      "id": "user-3",
+      "name": "Avery Chen",
+      "email": "auditor@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "AUDITOR",
+      "title": "Compliance Auditor"
+    }
+  ],
+  "employees": [],
+  "tasks": [],
+  "equipment": [],
+  "accessRequests": [],
+  "notifications": [],
+  "auditLogs": [],
+  "orientations": []
+}

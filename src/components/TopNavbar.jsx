@@ -147,7 +147,7 @@ export default function TopNavbar({
               setShowNotifications(false);
             }}
           >
-            <img src={currentUser.avatar} alt="" />
+            {currentUser.avatar ? <img src={currentUser.avatar} alt="" /> : <span className="profile-initials" aria-hidden="true">{currentUser.name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</span>}
             <span className="profile-trigger-text">
               <strong>{currentUser.name}</strong>
               <small>{currentUser.title}</small>
