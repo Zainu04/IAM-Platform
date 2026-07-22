@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Check, CheckCircle2, Download, UserPlus, X } from "lucide-react";
+import { Check, CheckCircle2, Download, FileText, UserPlus, X } from "lucide-react";
 import Sidebar from "./Sidebar.jsx";
 import TopNavbar from "./TopNavbar.jsx";
 import { safeApi } from "../services/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { AUDIT_DEMO_LOGS } from "../utils/auditDemoData.js";
 
 const INITIAL_EMPLOYEES = [
   { id:"emp-1", name:"Emily Carter", role:"UX Designer", department:"Design", email:"emily.carter@journeyone.com", avatar:"https://i.pravatar.cc/100?img=47", type:"onboarding", startLabel:"Starts Jul 28", startDate:"2026-07-28", progress:60, nextStep:{label:"Assign Laptop",icon:"laptop",due:"Today"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Provision accounts",done:true},{id:"s4",label:"Assign laptop",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
@@ -146,14 +147,14 @@ function NewJourneyModal({ type, onClose, onSubmit, presetEmployee = null, emplo
           ? "Create one permanent employee profile and begin their onboarding journey."
           : selectedEmployee
             ? `Continue ${selectedEmployee.name}'s lifecycle using the same saved employee profile.`
-            : "Choose an existing employee so their name, photo, role, access, and equipment remain connected."
+            : "Choose an existing employee, or enter their information manually if they are not listed yet."
       }
       onClose={onClose}
     >
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (name.trim() && role.trim() && date && (onboarding || selectedEmployee)) {
+          if (name.trim() && role.trim() && date) {
             onSubmit({
               name: name.trim(),
               role: role.trim(),
@@ -196,19 +197,19 @@ function NewJourneyModal({ type, onClose, onSubmit, presetEmployee = null, emplo
 
         <div className="field">
           <label>Employee name</label>
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Priya Sharma" required readOnly={!onboarding} />
+          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Priya Sharma" required  />
         </div>
         <div className="field">
           <label>Email address</label>
-          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="e.g. priya.sharma@company.com" required readOnly={!onboarding} />
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="e.g. priya.sharma@company.com" required  />
         </div>
         <div className="field">
           <label>Role / Title</label>
-          <input value={role} onChange={(event) => setRole(event.target.value)} placeholder="e.g. Product Designer" required readOnly={!onboarding} />
+          <input value={role} onChange={(event) => setRole(event.target.value)} placeholder="e.g. Product Designer" required  />
         </div>
         <div className="field">
           <label>Department</label>
-          <input value={department} onChange={(event) => setDepartment(event.target.value)} placeholder="e.g. Design" readOnly={!onboarding} />
+          <input value={department} onChange={(event) => setDepartment(event.target.value)} placeholder="e.g. Design"  />
         </div>
         <div className="field">
           <label>{onboarding ? "Start date" : "Last day"}</label>
@@ -220,11 +221,11 @@ function NewJourneyModal({ type, onClose, onSubmit, presetEmployee = null, emplo
           </div>
         )}
         {!onboarding && !employeeOptions.length && !presetEmployee && (
-          <div className="saved-profile-note">Complete an onboarding journey first. Employees must exist in the directory before offboarding can begin.</div>
+          <div className="saved-profile-note">No saved employees are available yet. You can still enter the employee information manually and start the offboarding workflow.</div>
         )}
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-primary" disabled={!onboarding && !selectedEmployee}>
+          <button className="btn-primary" disabled={!name.trim() || !role.trim() || !date}>
             <UserPlus /> {onboarding ? "Start Onboarding" : "Start Offboarding"}
           </button>
         </div>
@@ -234,6 +235,140 @@ function NewJourneyModal({ type, onClose, onSubmit, presetEmployee = null, emplo
 }
 
 function EmployeeDetailModal({employee,onClose,onToggleStep}){if(!employee)return null;const progress=Math.round(employee.steps.filter(s=>s.done).length/employee.steps.length*100);return <Modal title={employee.name} subtitle={`${employee.role} · ${employee.startLabel}`} onClose={onClose}><div className="progress-block"><div className="label">Journey progress</div><div className="progress-bar-row"><div className="progress-track"><div className={`progress-fill ${employee.type==="offboarding"?"offboarding":""}`} style={{width:`${progress}%`}}/></div><span className="progress-pct">{progress}%</span></div></div><div className="step-checklist">{employee.steps.map(s=><button key={s.id} className={`step-item ${s.done?"done":""}`} onClick={()=>onToggleStep(employee.id,s.id)}><span className="dot">{s.done&&<Check/>}</span>{s.label}</button>)}</div><div className="modal-actions"><button className="btn-secondary" onClick={onClose}>Close</button></div></Modal>}
+
+function AddTaskModal({ onClose, employees, onSubmit }) {
+  const [label, setLabel] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [priority, setPriority] = useState("Medium");
+  const [dueDate, setDueDate] = useState("");
+  const [route, setRoute] = useState("/tasks");
+
+  return (
+    <Modal title="Add HR Task" subtitle="Create a task and connect it to the page where the work gets completed." onClose={onClose}>
+      <form onSubmit={(event) => {
+        event.preventDefault();
+        if (!label.trim()) return;
+        onSubmit({ label: label.trim(), employeeId, priority, dueDate, route });
+      }}>
+        <div className="field">
+          <label>Task title</label>
+          <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="e.g. Review I-9 documents" required />
+        </div>
+        <div className="field">
+          <label>Related employee</label>
+          <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)}>
+            <option value="">General HR task</option>
+            {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
+          </select>
+        </div>
+        <div className="workflow-form-grid">
+          <div className="field">
+            <label>Priority</label>
+            <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+              <option>High</option><option>Medium</option><option>Low</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Due date</label>
+            <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Take me to</label>
+          <select value={route} onChange={(event) => setRoute(event.target.value)}>
+            <option value="/tasks">HR Tasks</option>
+            <option value="/documents">Employee Documents</option>
+            <option value="/orientation">Orientation Planning</option>
+            <option value="/onboarding">Onboarding</option>
+            <option value="/offboarding">Offboarding</option>
+            <option value="/employees">Employees</option>
+          </select>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary"><Check /> Add task</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function UploadDocumentModal({ onClose, employees, onSubmit, presetEmployeeId = "" }) {
+  const onboardingEmployees = employees.filter((employee) => employee.type === "onboarding");
+  const [employeeId, setEmployeeId] = useState(presetEmployeeId || onboardingEmployees[0]?.id || "");
+  const [title, setTitle] = useState("");
+  const [files, setFiles] = useState([]);
+
+  return (
+    <Modal title="Upload Employee Document" subtitle="Save a document title and connect the file to the employee's onboarding workflow." onClose={onClose}>
+      <form onSubmit={(event) => {
+        event.preventDefault();
+        if (!employeeId || !title.trim() || !files.length) return;
+        onSubmit({ employeeId, title: title.trim(), files });
+      }}>
+        <div className="field">
+          <label>Employee</label>
+          <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} required>
+            <option value="">Choose an employee...</option>
+            {onboardingEmployees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label>Document title</label>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Signed Offer Letter" required />
+        </div>
+        <label className="document-upload">
+          <FileText />
+          <span><strong>Select document</strong><small>PDF, DOCX, image, or other employee record</small></span>
+          <input type="file" multiple onChange={(event) => setFiles(Array.from(event.target.files || []))} />
+        </label>
+        {files.length > 0 && <div className="uploaded-files">{files.map((file) => <div key={`${file.name}-${file.size}`}><FileText /><span>{file.name}</span><CheckCircle2 /></div>)}</div>}
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={!employeeId || !title.trim() || !files.length}><Check /> Upload and verify</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ScheduleOrientationModal({ onClose, employees, onSubmit, presetEmployeeId = "" }) {
+  const eligible = employees.filter((employee) => employee.type === "onboarding" && employee.progress < 100);
+  const [employeeId, setEmployeeId] = useState(presetEmployeeId || eligible[0]?.id || "");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [host, setHost] = useState("");
+
+  return (
+    <Modal title="Schedule Orientation" subtitle="Plan the employee's first-day orientation and complete the connected HR task." onClose={onClose}>
+      <form onSubmit={(event) => {
+        event.preventDefault();
+        if (!employeeId || !date || !time || !location.trim() || !host.trim()) return;
+        onSubmit({ employeeId, date, time, location: location.trim(), host: host.trim() });
+      }}>
+        <div className="field">
+          <label>Employee</label>
+          <select value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} required>
+            <option value="">Choose an employee...</option>
+            {eligible.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
+          </select>
+        </div>
+        <div className="workflow-form-grid">
+          <div className="field"><label>Date</label><input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></div>
+          <div className="field"><label>Time</label><input type="time" value={time} onChange={(event) => setTime(event.target.value)} required /></div>
+        </div>
+        <div className="field"><label>Location or meeting link</label><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="e.g. Main Office, Room 204" required /></div>
+        <div className="field"><label>Orientation host</label><input value={host} onChange={(event) => setHost(event.target.value)} placeholder="e.g. Maya Thompson" required /></div>
+        <div className="modal-actions">
+          <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary"><Check /> Schedule orientation</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function ReportModal({onClose,employees,tasks,accessRequests}){const [type,setType]=useState("onboarding");function dl(){let rows=[],name="report.csv";if(type==="onboarding"){rows=employees.filter(e=>e.type==="onboarding").map(e=>({Name:e.name,Role:e.role,Start:e.startLabel,Progress:`${e.progress}%`}));name="onboarding-report.csv"}else if(type==="offboarding"){rows=employees.filter(e=>e.type==="offboarding").map(e=>({Name:e.name,Role:e.role,LastDay:e.startLabel,Progress:`${e.progress}%`}));name="offboarding-report.csv"}else if(type==="tasks"){rows=tasks.map(t=>({Task:t.label,Category:t.subLabel,Priority:t.priority,Status:t.done?"Done":"Open"}));name="tasks-report.csv"}else{rows=accessRequests.map(a=>({Name:a.name,System:a.system,Requested:a.requested,Status:a.status}));name="access-requests-report.csv"}const headers=rows.length?Object.keys(rows[0]):[];const csv=[headers.join(","),...rows.map(r=>headers.map(h=>`"${String(r[h]).replace(/"/g,'""')}"`).join(","))].join("\n");const blob=new Blob([csv],{type:"text/csv"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);onClose(name)}return <Modal title="Generate Report" subtitle="Choose a report to create and download as CSV." onClose={()=>onClose()}><div className="field"><label>Report type</label><select value={type} onChange={e=>setType(e.target.value)}><option value="onboarding">Onboarding summary</option><option value="offboarding">Offboarding summary</option><option value="tasks">Task list</option><option value="access">Access requests</option></select></div><div className="modal-actions"><button className="btn-secondary" onClick={()=>onClose()}>Cancel</button><button className="btn-primary" onClick={dl}><Download/>Download CSV</button></div></Modal>}
 function HowModal({onClose}){return <Modal title="How JourneyOne works" subtitle="A simple workflow behind every hire and every exit." onClose={onClose} width={480}><div className="step-checklist">{["Start a journey","Coordinate access and equipment","Track every required step","Export reports for stakeholders"].map((x,i)=><div className="step-item" key={x}><span className="dot done-dot">{i+1}</span><div><strong>{x}</strong></div></div>)}</div><div className="modal-actions"><button className="btn-primary full" onClick={onClose}>Got it</button></div></Modal>}
 
@@ -271,7 +406,10 @@ export default function Layout() {
   });
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
-  const [auditLogs, setAuditLogs] = useState(() => load("jo-audit", []));
+  const [auditLogs, setAuditLogs] = useState(() => {
+    const saved = load("jo-audit", []);
+    return saved.length ? saved : AUDIT_DEMO_LOGS;
+  });
   const [systemMode, setSystemMode] = useState("Local demo");
 
   useEffect(() => {
@@ -383,10 +521,34 @@ export default function Layout() {
     localStorage.setItem(migrationKey, "complete");
   }, []);
 
+
+  useEffect(() => {
+    const migrationKey = "jo-hr-dashboard-tasks-v1";
+    if (localStorage.getItem(migrationKey)) return;
+    const demoTasks = [
+      { id:"task-hr-welcome-emily", employeeId:"emp-1", actionType:"WELCOME_SENT", label:"Send first-day reminder to Emily Carter", subLabel:"Onboarding", priority:"High", assignedRole:"HR Manager", dueDate:"2026-07-27", status:"OPEN", done:false, route:"/onboarding/emp-1" },
+      { id:"task-hr-orientation-marcus", employeeId:"emp-2", actionType:"ORIENTATION_SCHEDULED", label:"Schedule orientation for Marcus Lee", subLabel:"Onboarding", priority:"Medium", assignedRole:"HR Manager", dueDate:"2026-07-28", status:"OPEN", done:false, route:"/orientation" },
+      { id:"task-hr-documents-ava", employeeId:"emp-3", actionType:"DOCUMENTS_APPROVED", label:"Review signed documents for Ava Patel", subLabel:"Onboarding", priority:"High", assignedRole:"HR Manager", dueDate:"2026-07-26", status:"OPEN", done:false, route:"/documents" },
+      { id:"task-hr-exit-daniel", employeeId:"emp-4", actionType:"EXIT_INTERVIEW_COMPLETED", label:"Complete exit interview for Daniel Brooks", subLabel:"Offboarding", priority:"Medium", assignedRole:"HR Manager", dueDate:"2026-07-30", status:"OPEN", done:false, route:"/offboarding/emp-4" },
+    ];
+    setTasks((previous) => {
+      const ids = new Set(previous.map((task) => task.id));
+      return [...demoTasks.filter((task) => !ids.has(task.id)), ...previous];
+    });
+    localStorage.setItem(migrationKey, "complete");
+  }, []);
+
   function recordAudit(action, resourceType, resourceId, details = {}) {
     setAuditLogs((previous) => [{
       id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      actorName: currentUser.name, actorRole: currentUser.title, action, resourceType, resourceId, details,
+      actorName: currentUser.name,
+      actorEmail: currentUser.email || `${String(currentUser.name || "user").toLowerCase().replace(/\s+/g, ".")}@journeyone.com`,
+      actorRole: currentUser.role || currentUser.title,
+      action,
+      resourceType,
+      resourceId,
+      status: details.status || "SUCCESS",
+      details,
       createdAt: new Date().toISOString(),
     }, ...previous]);
   }
@@ -525,7 +687,7 @@ export default function Layout() {
 
     const onboardingAction = {"send-welcome":"WELCOME_SENT","collect-documents":"DOCUMENTS_APPROVED","provision-access":"ACCESS_PROVISIONED","assign-equipment":"EQUIPMENT_ASSIGNED","schedule-orientation":"ORIENTATION_SCHEDULED"}[stepId];
     if (onboardingAction) completeTaskFor(employeeId, onboardingAction);
-    recordAudit("WORKFLOW_STEP_COMPLETED", "employee", employeeId, { stepId, workflow: "onboarding" });
+    recordAudit(onboardingAction || "WORKFLOW_STEP_COMPLETED", "employee", employeeId, { ...details, stepId, workflow: "onboarding", employeeName: details.employeeName, category: completedLabel, system: "JourneyOne Onboarding", proof: `${completedLabel} completed for ${details.employeeName || "employee"}.` });
     safeApi(`/employees/${employeeId}/steps/${stepId}`, { method:"PATCH", body:JSON.stringify({ details }) });
 
     setNotifications((previous) => [
@@ -594,7 +756,7 @@ export default function Layout() {
 
     const offboardingAction = {"notify-teams":"TEAMS_NOTIFIED","revoke-access":"ACCESS_REVOKED","transfer-files":"FILES_TRANSFERRED","collect-equipment":"EQUIPMENT_COLLECTED","exit-interview":"EXIT_INTERVIEW_COMPLETED","archive-employee":"EMPLOYEE_ARCHIVED"}[stepId];
     if (offboardingAction) completeTaskFor(employeeId, offboardingAction);
-    recordAudit("WORKFLOW_STEP_COMPLETED", "employee", employeeId, { stepId, workflow: "offboarding" });
+    recordAudit(offboardingAction || "WORKFLOW_STEP_COMPLETED", "employee", employeeId, { ...details, stepId, workflow: "offboarding", employeeName, category: completedLabel, system: stepId === "revoke-access" ? "Identity & Access Management" : "JourneyOne Offboarding", proof: `${completedLabel} completed for ${employeeName}.` });
     safeApi(`/employees/${employeeId}/steps/${stepId}`, { method:"PATCH", body:JSON.stringify({ details }) });
 
     setNotifications((previous) => [
@@ -702,7 +864,17 @@ export default function Layout() {
 
     setEmployees((previous) => [employee, ...previous]);
     createTasksForJourney(employee);
-    recordAudit("EMPLOYEE_JOURNEY_CREATED", "employee", employee.id, { type });
+    recordAudit(type === "onboarding" ? "ONBOARDING_INITIATED" : "OFFBOARDING_INITIATED", "employee", employee.id, {
+      type,
+      employeeName: employee.name,
+      employeeId: employee.id,
+      employeeCode: employee.profileId,
+      department: employee.department,
+      category: type === "onboarding" ? "Onboarding Started" : "Offboarding Started",
+      system: "JourneyOne",
+      proof: `${type === "onboarding" ? "Onboarding" : "Offboarding"} journey started for ${employee.name} with ${steps.length} required lifecycle steps.`,
+      effectiveDate: date,
+    });
     safeApi("/employees", { method:"POST", body:JSON.stringify(employee) });
     setModal(null);
     flash(`${type === "onboarding" ? "Onboarding" : "Offboarding"} started for ${name}.`);
@@ -712,6 +884,47 @@ export default function Layout() {
     } else {
       navigate(`/offboarding/${id}`);
     }
+  }
+
+
+  function addCustomHrTask({ label, employeeId, priority, dueDate, route }) {
+    const employee = employees.find((item) => item.id === employeeId);
+    const task = {
+      id: `task-custom-${Date.now()}`,
+      employeeId: employeeId || null,
+      actionType: "CUSTOM_HR_TASK",
+      label,
+      subLabel: employee ? `${employee.name} · Custom HR task` : "Custom HR task",
+      priority,
+      assignedRole: "HR Manager",
+      dueDate: dueDate || new Date().toISOString().slice(0, 10),
+      status: "OPEN",
+      done: false,
+      route,
+      custom: true,
+    };
+    setTasks((previous) => [task, ...previous]);
+    recordAudit("HR_TASK_CREATED", "task", task.id, { employeeId, route });
+    setModal(null);
+    flash("HR task added.");
+  }
+
+  function saveEmployeeDocument({ employeeId, title, files }) {
+    const employee = employees.find((item) => item.id === employeeId);
+    if (!employee) return;
+    const existingStep = employee.steps?.find((step) => step.id === "collect-documents");
+    const existingDocuments = existingStep?.details?.documents || [];
+    const uploadedDocuments = files.map((file) => ({ title, name: file.name, size: file.size, type: file.type, uploadedAt: new Date().toISOString() }));
+    const documents = [...existingDocuments, ...uploadedDocuments];
+    completeOnboardingStep(employeeId, "collect-documents", { employeeName: employee.name, documents, documentTitle: title });
+    setModal(null);
+  }
+
+  function saveOrientation({ employeeId, date, time, location, host }) {
+    const employee = employees.find((item) => item.id === employeeId);
+    if (!employee) return;
+    completeOnboardingStep(employeeId, "schedule-orientation", { employeeName: employee.name, date, time, location, host });
+    setModal(null);
   }
 
   const context = {
@@ -731,6 +944,9 @@ export default function Layout() {
     completeOffboardingStep,
     startOnboarding: () => setModal({ type: "new-onboarding" }),
     startOffboarding: () => setModal({ type: "new-offboarding" }),
+    addHrTask: () => setModal({ type: "add-hr-task" }),
+    uploadDocument: (employeeId = "") => setModal({ type: "upload-document", payload: { employeeId } }),
+    scheduleOrientation: (employeeId = "") => setModal({ type: "schedule-orientation", payload: { employeeId } }),
     startOffboardingFor: (employee) =>
       setModal({ type: "new-offboarding", payload: employee }),
     generateReport: () => setModal({ type: "report" }),
@@ -739,6 +955,23 @@ export default function Layout() {
       const task = tasks.find((item) => item.id === id);
       if (!task?.done) { flash("This task completes automatically when its related action is finished."); return; }
       flash("Completed tasks are locked to preserve the audit trail.");
+    },
+    manualToggleTask: (id) => {
+      const task = tasks.find((item) => item.id === id);
+      if (!task) return;
+      const nextDone = !(task.done || task.status === "COMPLETED");
+      setTasks((previous) => previous.map((item) => item.id === id ? {
+        ...item,
+        done: nextDone,
+        status: nextDone ? "COMPLETED" : "OPEN",
+        completedAt: nextDone ? new Date().toISOString() : null,
+      } : item));
+      recordAudit(nextDone ? "TASK_MANUALLY_COMPLETED" : "TASK_REOPENED", "task", id, {
+        employeeId: task.employeeId,
+        actionType: task.actionType,
+      });
+      safeApi(`/tasks/${id}`, { method:"PATCH", body:JSON.stringify({ status: nextDone ? "COMPLETED" : "OPEN" }) });
+      flash(nextDone ? "Task marked complete." : "Task reopened.");
     },
     decideAccess: (id, status, reason = "") => {
       const request = accessRequests.find((item) => item.id === id);
@@ -762,6 +995,34 @@ export default function Layout() {
       recordAudit("EQUIPMENT_STATUS_UPDATED", "equipment", id, { status, employeeId:employee?.id });
       if (item && employee) safeApi(`/equipment/${id}/${status === "Available" ? "return" : "assign"}`, { method:"POST", body:JSON.stringify({ employeeId:employee.id, employeeName:employee.name }) });
       flash("Equipment status updated and related task completed.");
+    },
+    assignEquipment: (equipmentId, employeeId) => {
+      const item = equipment.find((entry) => entry.id === equipmentId);
+      const employee = employees.find((entry) => entry.id === employeeId);
+      if (!item || !employee) {
+        flash("Choose a valid device and employee.");
+        return;
+      }
+      if (item.status === "Assigned" && item.employeeId && item.employeeId !== employeeId) {
+        flash("This device is already assigned to another employee.");
+        return;
+      }
+      completeOnboardingStep(employeeId, "assign-equipment", {
+        equipmentId,
+        employeeId,
+        employeeName: employee.name,
+        employeeAvatar: employee.avatar,
+        equipmentName: item.item,
+        assetTag: item.assetTag,
+      });
+      setEquipment((previous) => previous.map((entry) => entry.id === equipmentId ? {
+        ...entry,
+        assignedTo: employee.name,
+        employeeId: employee.id,
+        status: "Assigned",
+        assignedAt: new Date().toISOString(),
+      } : entry));
+      flash(`${item.item} assigned to ${employee.name}.`);
     },
     addEquipment: (item) =>
       setEquipment((previous) => [
@@ -851,7 +1112,7 @@ export default function Layout() {
           onClose={() => setModal(null)}
           presetEmployee={modal.payload || null}
           employeeOptions={employees
-            .filter((employee) => employee.type === "onboarding" && employee.progress === 100)
+            .filter((employee) => employee.type === "onboarding")
             .filter((employee, index, list) =>
               list.findIndex((item) => (item.profileId || item.id) === (employee.profileId || employee.id)) === index
             )
@@ -879,6 +1140,9 @@ export default function Layout() {
           }}
         />
       )}
+      {modal?.type === "add-hr-task" && <AddTaskModal employees={employees} onClose={() => setModal(null)} onSubmit={addCustomHrTask} />}
+      {modal?.type === "upload-document" && <UploadDocumentModal employees={employees} presetEmployeeId={modal.payload?.employeeId || ""} onClose={() => setModal(null)} onSubmit={saveEmployeeDocument} />}
+      {modal?.type === "schedule-orientation" && <ScheduleOrientationModal employees={employees} presetEmployeeId={modal.payload?.employeeId || ""} onClose={() => setModal(null)} onSubmit={saveOrientation} />}
       {modal?.type === "how" && <HowModal onClose={() => setModal(null)} />}
       {toast && (
         <div className="toast">

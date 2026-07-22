@@ -3,9 +3,10 @@ import {
   UserPlus, LogOut, ShieldCheck, BarChart2, ArrowRight, Laptop,
   FileText, Briefcase, Clock3, Users, CalendarDays, ClipboardCheck,
   MonitorCheck, KeyRound, TriangleAlert, ScrollText, Activity,
-  CircleCheckBig, GraduationCap, UserCheck, Flag, Play, ListChecks
+  CircleCheckBig, GraduationCap, UserCheck, Flag, Play, ListChecks, Plus, Check, Pencil
 } from "lucide-react";
 import { getTaskRoute } from "../utils/taskRouting.js";
+import { getAuditLogs } from "../utils/auditDemoData.js";
 
 const roleCopy = {
   IT_MANAGER: {
@@ -295,58 +296,288 @@ function ITDashboard({ c }) {
 }
 
 function HRDashboard({ c }) {
-  const hrTasks = c.tasks.filter((t) => /HR Manager/i.test(t.assignedRole || "") && !t.done);
-  const starts = c.employees.filter((e) => e.type === "onboarding" && e.progress < 100);
-  const leaves = c.employees.filter((e) => e.type === "offboarding" && e.progress < 100);
-  const documentTasks = hrTasks.filter((t) => /document|offer|welcome/i.test(t.label));
-  return <>
-    <div className="role-metric-grid">
-      <MetricCard icon={UserPlus} value={starts.length} label="Employees starting" note="Active onboarding journeys" />
-      <MetricCard icon={LogOut} value={leaves.length} label="Employees leaving" note="Active offboarding journeys" />
-      <MetricCard icon={FileText} value={documentTasks.length} label="Documents waiting" note="Review or collection needed" />
-      <MetricCard icon={CalendarDays} value={starts.filter((e) => e.steps?.some((s) => s.id === "schedule-orientation" && !s.done)).length} label="Orientations to schedule" note="Upcoming first days" />
+  const hrTasks = c.tasks.filter((task) => /HR Manager/i.test(task.assignedRole || ""));
+  const activeHrTasks = hrTasks.filter((task) => !task.done && task.status !== "COMPLETED");
+  const activeEmployees = c.employees
+    .filter((employee) => employee.progress < 100)
+    .sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0))
+    .slice(0, 6);
+
+  const routeForEmployee = (employee) => employee.type === "offboarding"
+    ? `/offboarding/${employee.id}`
+    : `/onboarding/${employee.id}`;
+
+  const employeeStatus = (employee) => {
+    if (employee.progress >= 100) return "Complete";
+    if (employee.type === "offboarding") return "Offboarding";
+    return "Onboarding";
+  };
+
+  const currentStep = (employee) =>
+    employee.steps?.find((step) => !step.done)?.label || employee.nextStep?.label || "Review journey";
+
+  const hrActions = [
+    {
+      icon: UserPlus,
+      title: "Start Onboarding",
+      description: "Create a new employee journey and coordinate their first day.",
+      onClick: c.startOnboarding,
+    },
+    {
+      icon: LogOut,
+      title: "Start Offboarding",
+      description: "Begin a complete and respectful employee departure workflow.",
+      onClick: c.startOffboarding,
+    },
+    {
+      icon: FileText,
+      title: "Review Documents",
+      description: "Review employment forms, acknowledgements, and records.",
+      onClick: () => c.navigate("/documents"),
+    },
+    {
+      icon: CalendarDays,
+      title: "Plan Orientation",
+      description: "Schedule first-day sessions, locations, and orientation hosts.",
+      onClick: () => c.navigate("/orientation"),
+    },
+  ];
+
+  return (
+    <div className="hr-dashboard-v2">
+      <div className="hr-action-grid">
+        {hrActions.map(({ icon: Icon, title, description, onClick }) => (
+          <button className="hr-action-card" key={title} onClick={onClick}>
+            <span className="hr-action-icon"><Icon /></span>
+            <span className="hr-action-copy">
+              <strong>{title}</strong>
+              <small>{description}</small>
+            </span>
+            <span className="hr-action-plus" aria-hidden="true"><Plus /></span>
+          </button>
+        ))}
+      </div>
+
+      <div className="hr-dashboard-panels">
+        <section className="hr-panel hr-employee-panel">
+          <div className="hr-panel-header">
+            <div className="hr-panel-title">
+              <span className="hr-panel-icon"><Users /></span>
+              <div>
+                <h2>Employee Journeys</h2>
+                <p>See who needs attention and continue from their current step.</p>
+              </div>
+            </div>
+            <button className="hr-text-link" onClick={() => c.navigate("/employees")}>View all</button>
+          </div>
+
+          <div className="hr-employee-list">
+            {activeEmployees.map((employee) => {
+              const initials = employee.name.split(" ").map((part) => part[0]).join("").slice(0, 2);
+              return (
+                <article className="hr-employee-row" key={employee.id}>
+                  {employee.avatar
+                    ? <img className="hr-employee-avatar" src={employee.avatar} alt="" />
+                    : <span className="hr-employee-avatar initials">{initials}</span>}
+                  <div className="hr-employee-contact">
+                    <strong>{employee.name}</strong>
+                    <a href={`mailto:${employee.email}`} onClick={(event) => event.stopPropagation()}>{employee.email}</a>
+                    <span>{employee.role} · {employee.department}</span>
+                  </div>
+                  <div className="hr-employee-status">
+                    <span className={`hr-status-pill ${employee.type}`}>{employeeStatus(employee)}</span>
+                    <small>{currentStep(employee)}</small>
+                  </div>
+                  <div className="hr-progress-block">
+                    <div><span>Progress</span><strong>{employee.progress}%</strong></div>
+                    <div className="hr-progress-track"><i style={{ width: `${employee.progress}%` }} /></div>
+                  </div>
+                  <button className="hr-continue-button" onClick={() => c.navigate(routeForEmployee(employee))}>
+                    Continue <ArrowRight />
+                  </button>
+                </article>
+              );
+            })}
+            {!activeEmployees.length && (
+              <div className="hr-empty-state">
+                <CircleCheckBig />
+                <div><strong>Every journey is up to date</strong><span>New employee journeys will appear here.</span></div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="hr-panel hr-task-panel">
+          <div className="hr-panel-header">
+            <div className="hr-panel-title">
+              <span className="hr-panel-icon gold"><ListChecks /></span>
+              <div>
+                <h2>HR Tasks</h2>
+                <p>{activeHrTasks.length} task{activeHrTasks.length === 1 ? "" : "s"} still need attention.</p>
+              </div>
+            </div>
+            <div className="hr-task-header-actions">
+              <button className="hr-icon-button" onClick={c.addHrTask} aria-label="Add HR task" title="Add HR task"><Pencil /></button>
+              <button className="hr-text-link" onClick={() => c.navigate("/tasks")}>View all</button>
+            </div>
+          </div>
+
+          <div className="hr-task-list">
+            {hrTasks.slice(0, 7).map((task) => {
+              const complete = task.done || task.status === "COMPLETED";
+              const employee = c.employees.find((item) => item.id === task.employeeId);
+              return (
+                <div className={`hr-task-row ${complete ? "complete" : ""}`} key={task.id}>
+                  <button
+                    className={`hr-task-checkbox ${complete ? "checked" : ""}`}
+                    onClick={() => c.manualToggleTask(task.id)}
+                    aria-label={`${complete ? "Reopen" : "Complete"} ${task.label}`}
+                  >
+                    {complete && <Check />}
+                  </button>
+                  <button className="hr-task-open" onClick={() => c.navigate(getTaskRoute(task, c.employees))}>
+                    <span className="hr-task-copy">
+                      <strong>{task.label}</strong>
+                      <small>{employee ? `${employee.name} · ${task.priority || "Medium"} priority` : task.subLabel || task.assignedRole}</small>
+                    </span>
+                    <ArrowRight />
+                  </button>
+                </div>
+              );
+            })}
+            {!hrTasks.length && (
+              <div className="hr-empty-state compact">
+                <CircleCheckBig />
+                <div><strong>You are all caught up</strong><span>New HR tasks will appear automatically.</span></div>
+              </div>
+            )}
+          </div>
+          <div className="hr-task-note">
+            <ClipboardCheck />
+            <p>Tasks check off automatically when you complete their workflow action, or you can mark them manually.</p>
+          </div>
+        </section>
+      </div>
     </div>
-    <h2 className="section-title">Quick actions</h2>
-    <div className="quick-actions role-actions">
-      <ActionCard icon={UserPlus} title="Start Onboarding" description="Add a new employee and coordinate their first day." onClick={c.startOnboarding} />
-      <ActionCard icon={LogOut} title="Start Offboarding" description="Begin a respectful and complete departure workflow." onClick={c.startOffboarding} />
-      <ActionCard icon={FileText} title="Review Documents" description="Track signed forms and employee records." onClick={() => c.navigate("/documents")} />
-      <ActionCard icon={CalendarDays} title="Plan Orientation" description="Schedule first-day sessions and hosts." onClick={() => c.navigate("/orientation")} />
-    </div>
-    <div className="dashboard-grid role-dashboard-grid">
-      <Section title="Employees Starting"><JourneyList employees={c.employees} type="onboarding" onOpen={c.openEmployee}/></Section>
-      <Section title="HR Tasks"><TaskList tasks={hrTasks}/></Section>
-    </div>
-  </>;
+  );
 }
 
 function AuditorDashboard({ c }) {
-  const logs = c.auditLogs || [];
-  const completed = c.tasks.filter((t) => t.done || t.status === "COMPLETED").length;
-  const total = c.tasks.length || 1;
-  const complianceScore = Math.round((completed / total) * 100);
-  return <>
-    <div className="role-metric-grid">
-      <MetricCard icon={Activity} value={logs.length} label="Audit events" note="Recorded system actions" />
-      <MetricCard icon={ScrollText} value={`${complianceScore}%`} label="Workflow completion" note="Based on task evidence" />
-      <MetricCard icon={TriangleAlert} value={c.tasks.filter(t => !t.done && t.dueDate && new Date(t.dueDate) < new Date()).length} label="Overdue controls" note="Open past due date" />
-      <MetricCard icon={BarChart2} value={c.employees.length} label="Employee records" note="Available for review" />
+  const logs = getAuditLogs(c.auditLogs || []);
+  const offboardingLogs = logs.filter((log) => /OFFBOARD|ACCESS_REVOKED|ACCOUNT_DEACTIVATION/i.test(log.action || ""));
+  const offboardingStarts = logs.filter((log) => /OFFBOARDING_(INITIATED|STARTED)|EMPLOYEE_JOURNEY_CREATED/i.test(log.action || "") && (log.details?.type === "offboarding" || /OFFBOARD/i.test(log.action || "")));
+  const offboardedEmployeeIds = new Set(offboardingStarts.map((log) => log.details?.employeeId || log.resourceId || log.details?.employeeName));
+  const failedLogs = logs.filter((log) => String(log.status || "").toUpperCase() === "FAILED");
+  const criticalFailureLogs = failedLogs.filter((log) => /ACCESS|ACCOUNT/i.test(log.action || ""));
+  const openCriticalRisks = criticalFailureLogs.length;
+  const orphanedAccounts = 1;
+  const deactivationEvents = logs.filter((log) => /ACCESS_REVOKED|ACCOUNT_DEACTIVATION/i.test(log.action || ""));
+  const failedDeactivations = deactivationEvents.filter((log) => String(log.status || "").toUpperCase() === "FAILED");
+  const slaBreaches = deactivationEvents.length ? Math.round((failedDeactivations.length / deactivationEvents.length) * 100) : 0;
+
+  const sortedLogs = [...logs].sort((a, b) => new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp));
+  const dailyMap = new Map();
+  sortedLogs.forEach((log) => {
+    const date = new Date(log.createdAt || log.timestamp);
+    if (Number.isNaN(date.getTime())) return;
+    const key = date.toISOString().slice(0, 10);
+    dailyMap.set(key, (dailyMap.get(key) || 0) + 1);
+  });
+  const activity = [...dailyMap.entries()].slice(-7).map(([date, count]) => ({ date, count }));
+  const maxCount = Math.max(...activity.map((item) => item.count), 1);
+  const chartWidth = 640;
+  const chartHeight = 210;
+  const leftPad = 38;
+  const bottomPad = 35;
+  const usableWidth = chartWidth - leftPad - 20;
+  const usableHeight = chartHeight - bottomPad - 20;
+  const points = activity.map((item, index) => ({
+    ...item,
+    x: leftPad + (activity.length === 1 ? usableWidth / 2 : (index * usableWidth) / (activity.length - 1)),
+    y: 15 + usableHeight - (item.count / maxCount) * usableHeight,
+  }));
+  const polyline = points.map((point) => `${point.x},${point.y}`).join(" ");
+
+  const metricCards = [
+    { label: "Total offboardings", value: offboardedEmployeeIds.size, note: "Employees with an offboarding event in this audit period", tone: "blue" },
+    { label: "SLA breach rate", value: `${slaBreaches}%`, note: slaBreaches ? "Deactivation exceeded the target window" : "All reviewed deactivations met SLA", tone: slaBreaches ? "red" : "green", change: slaBreaches ? "↑ Needs review" : "↓ On target" },
+    { label: "Open critical risks", value: openCriticalRisks, note: "Former employee access still requiring proof", tone: openCriticalRisks ? "red" : "green" },
+    { label: "Orphaned accounts", value: orphanedAccounts, note: "Active account without a current employee match", tone: orphanedAccounts ? "gold" : "green" },
+  ];
+
+  const evidenceLabel = (log) => {
+    const details = log.details || {};
+    return {
+      title: details.category || String(log.action || "System event").replaceAll("_", " "),
+      proof: details.proof || `${details.employeeName || "A system record"} was verified in the immutable ledger.`,
+      timestamp: new Date(log.createdAt || log.timestamp).toISOString(),
+      status: String(log.status || "SUCCESS").toUpperCase(),
+    };
+  };
+
+  return <div className="auditor-dashboard-v3">
+    <div className="auditor-insight-grid">
+      {metricCards.map((card) => <article className={`auditor-insight-card ${card.tone}`} key={card.label}>
+        <span className="auditor-insight-label">{card.label}</span>
+        <div className="auditor-insight-value"><strong>{card.value}</strong>{card.change && <span className={card.tone === "red" ? "trend-down" : "trend-up"}>{card.change}</span>}</div>
+        <p><span className="insight-spark">✦</span>{card.note}</p>
+      </article>)}
     </div>
-    <h2 className="section-title">Audit workspace</h2>
-    <div className="quick-actions role-actions auditor-actions">
-      <ActionCard icon={ScrollText} title="Open Compliance" description="Review controls, evidence, and quality metrics." onClick={() => c.navigate("/compliance")} />
-      <ActionCard icon={BarChart2} title="View Reports" description="Review or export lifecycle records." onClick={() => c.navigate("/reports")} />
+
+    <div className="auditor-visual-grid refined">
+      <section className="card auditor-chart-card line-chart-card">
+        <div className="card-head"><div><h2 className="section-title no-margin">Verified event activity</h2><p className="qa-desc">Daily count of immutable HR, IT, access, document, and equipment events.</p></div><button className="hr-text-link" onClick={() => c.navigate("/audit-history")}>Open ledger</button></div>
+        <div className="auditor-line-chart" aria-label="Verified audit event activity by day">
+          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img">
+            {[0, 1, 2, 3].map((line) => {
+              const y = 15 + (usableHeight * line) / 3;
+              return <line key={line} x1={leftPad} x2={chartWidth - 20} y1={y} y2={y} className="chart-grid-line" />;
+            })}
+            {points.length > 1 && <polyline points={polyline} className="audit-chart-line" />}
+            {points.map((point) => <g key={point.date}>
+              <circle cx={point.x} cy={point.y} r="5" className="audit-chart-point" />
+              <text x={point.x} y={point.y - 12} textAnchor="middle" className="audit-chart-count">{point.count}</text>
+              <text x={point.x} y={chartHeight - 10} textAnchor="middle" className="audit-chart-date">{new Date(`${point.date}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</text>
+            </g>)}
+          </svg>
+        </div>
+        <div className="chart-caption"><Clock3 /> Each point is backed by exact event timestamps in Audit History.</div>
+      </section>
+
+      <section className="card auditor-risk-card">
+        <div className="card-head"><div><h2 className="section-title no-margin">SLA proof snapshot</h2><p className="qa-desc">Offboarding access removal evidence.</p></div><button className="hr-text-link" onClick={() => c.navigate("/compliance")}>Review controls</button></div>
+        <div className="sla-proof-list">
+          <div><span>HR termination recorded</span><strong>Jul 19 · 5:44 PM</strong><small>Nora Bennett</small></div>
+          <i />
+          <div><span>AWS deactivation attempted</span><strong>Jul 19 · 6:02 PM</strong><small className="risk-text">Failed · manual action required</small></div>
+          <i />
+          <div><span>Slack access revoked</span><strong>Jul 22 · 1:42 PM</strong><small className="success-text">Verified in audit ledger</small></div>
+        </div>
+      </section>
     </div>
-    <div className="dashboard-grid role-dashboard-grid">
-      <Section title="Recent Audit Activity">
-        {logs.slice(0,6).map((log, index) => <div className="role-list-row" key={log.id || index}><div className="role-list-icon"><Activity/></div><div className="role-list-body"><strong>{(log.action || "SYSTEM_EVENT").replaceAll("_"," ")}</strong><span>{log.resourceType || "system"} · {log.actorName || log.userName || "JourneyOne user"}</span></div><small>{log.timestamp ? new Date(log.timestamp).toLocaleDateString() : "Recorded"}</small></div>)}
-        {!logs.length && <div className="empty-state">Audit events will appear as users complete actions.</div>}
+
+    <div className="dashboard-grid role-dashboard-grid auditor-bottom-grid">
+      <Section title="Latest Verified Evidence" action={<button className="hr-text-link" onClick={() => c.navigate("/audit-history")}>View full ledger</button>}>
+        <p className="evidence-helper">Each item is proof that a specific lifecycle control was performed by an identified actor at an exact time.</p>
+        {logs.slice(0, 5).map((log, index) => {
+          const evidence = evidenceLabel(log);
+          return <button className="auditor-evidence-row detailed" onClick={() => c.navigate("/audit-history")} key={log.id || index}>
+            <div className="role-list-icon"><Activity /></div>
+            <div className="role-list-body"><strong>{evidence.title}</strong><span>{evidence.proof}</span><code>{evidence.timestamp}</code></div>
+            <span className={`audit-status ${evidence.status.toLowerCase()}`}>{evidence.status}</span>
+            <ArrowRight />
+          </button>;
+        })}
       </Section>
-      <Section title="Read-only Review">
-        <div className="audit-readonly-note"><ShieldCheck/><div><strong>Auditor permissions are read-only</strong><p>You can review reports, compliance controls, and audit history, but cannot change employee, equipment, or access records.</p></div></div>
+      <Section title="Auditor Shortcuts">
+        <div className="auditor-shortcut-list">
+          <button onClick={() => c.navigate("/compliance")}><ShieldCheck /><span><strong>Review compliance controls</strong><small>Interpret ledger evidence as risks, exceptions, and SLA gaps.</small></span><ArrowRight /></button>
+          <button onClick={() => c.navigate("/audit-history")}><ScrollText /><span><strong>Inspect immutable event ledger</strong><small>Filter by employee, app, actor, action, or status and export CSV.</small></span><ArrowRight /></button>
+          <button onClick={() => c.navigate("/reports")}><BarChart2 /><span><strong>Export compliance reports</strong><small>Prepare offline evidence for external review.</small></span><ArrowRight /></button>
+        </div>
       </Section>
     </div>
-  </>;
+  </div>;
 }
 
 export default function Dashboard() {
@@ -362,9 +593,6 @@ export default function Dashboard() {
     {role === "IT_MANAGER" && <ITDashboard c={c}/>} 
     {role === "HR_MANAGER" && <HRDashboard c={c}/>} 
     {role === "AUDITOR" && <AuditorDashboard c={c}/>} 
-    {role !== "IT_MANAGER" && <div className="banner">
-      <div className="banner-left"><div className="banner-icon"><Flag/></div><div><h3>Every journey matters.</h3><p>Each role sees the information and actions needed to support a secure, coordinated employee experience.</p></div></div>
-      <button className="btn-primary" onClick={c.showHow}>See how it works <Play/></button>
-    </div>}
+
   </>;
 }

@@ -4,6 +4,7 @@
 // keyed by employee *id* — so we look the employee up once and branch by
 // actionType to build the right link.
 export function getTaskRoute(task, employees = []) {
+  if (task.route) return task.route;
   if (task.targetPath) return task.targetPath;
   const employee = employees.find((item) => item.id === task.employeeId);
 
