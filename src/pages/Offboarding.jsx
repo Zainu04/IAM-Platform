@@ -10,7 +10,6 @@ import {
   Laptop,
   LogOut,
   Mail,
-  MessageSquareText,
   ShieldOff,
   X,
 } from "lucide-react";
@@ -20,7 +19,6 @@ const STEP_ICONS = {
   "revoke-access": ShieldOff,
   "transfer-files": Files,
   "collect-equipment": Laptop,
-  "exit-interview": MessageSquareText,
   "archive-employee": Archive,
 };
 
@@ -46,8 +44,6 @@ function TaskModal({ employee, step, context, onClose }) {
   const [returnedItems, setReturnedItems] = useState(
     assignedEquipment.map((item) => item.id)
   );
-  const [reason, setReason] = useState("Voluntary resignation");
-  const [interviewNotes, setInterviewNotes] = useState("");
   const [archiveConfirmed, setArchiveConfirmed] = useState(false);
 
   function complete(details) {
@@ -232,42 +228,6 @@ function TaskModal({ employee, step, context, onClose }) {
                 onClick={() => complete({ returnedEquipmentIds: returnedItems, itemCount: assignedEquipment.length })}
               >
                 <Laptop /> Confirm equipment return
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step.id === "exit-interview" && (
-          <div>
-            <div className="field">
-              <label>Reason for leaving</label>
-              <select value={reason} onChange={(event) => setReason(event.target.value)}>
-                <option>Voluntary resignation</option>
-                <option>Retirement</option>
-                <option>End of contract</option>
-                <option>Layoff</option>
-                <option>Performance-related separation</option>
-                <option>Other</option>
-              </select>
-            </div>
-            <div className="field">
-              <label>Exit interview notes</label>
-              <textarea
-                rows="8"
-                value={interviewNotes}
-                onChange={(event) => setInterviewNotes(event.target.value)}
-                placeholder="Record feedback, handoff details, and any follow-up actions..."
-              />
-            </div>
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!reason || !interviewNotes.trim()}
-                onClick={() => complete({ reason, interviewNotes, interviewer: context.currentUser.name })}
-              >
-                <MessageSquareText /> Save exit interview
               </button>
             </div>
           </div>

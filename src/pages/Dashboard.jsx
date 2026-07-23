@@ -316,29 +316,62 @@ function HRDashboard({ c }) {
   const currentStep = (employee) =>
     employee.steps?.find((step) => !step.done)?.label || employee.nextStep?.label || "Review journey";
 
+  // Count each employee journey once, even when older/demo data contains duplicates.
+  const uniqueJourneys = Array.from(
+    new Map(
+      c.employees.map((employee) => [
+        `${employee.type}:${String(employee.profileId || employee.email || employee.name).trim().toLowerCase()}`,
+        employee,
+      ])
+    ).values()
+  );
+  const activeOnboardings = uniqueJourneys.filter((employee) => employee.type !== "offboarding" && employee.progress < 100);
+  const activeOffboardings = uniqueJourneys.filter((employee) => employee.type === "offboarding" && employee.progress < 100);
+  const onboardingCount = activeOnboardings.length;
+  const offboardingCount = activeOffboardings.length;
+  const documentsCount = activeOnboardings.filter((employee) => {
+    const documentStep = employee.steps?.find((step) => ["collect-documents", "upload-documents"].includes(step.id));
+    return documentStep && !documentStep.done;
+  }).length;
+  const orientationCount = activeOnboardings.filter((employee) =>
+    employee.steps?.some((step) => step.id === "schedule-orientation" && step.done)
+  ).length;
+
   const hrActions = [
     {
+      count: onboardingCount,
+      statusText: `${onboardingCount === 1 ? "Onboarding" : "Onboardings"} in progress`,
       icon: UserPlus,
       title: "Start Onboarding",
       description: "Create a new employee journey and coordinate their first day.",
+      actionLabel: "Start Onboarding",
       onClick: c.startOnboarding,
     },
     {
+      count: offboardingCount,
+      statusText: `${offboardingCount === 1 ? "Offboarding" : "Offboardings"} in progress`,
       icon: LogOut,
       title: "Start Offboarding",
       description: "Begin a complete and respectful employee departure workflow.",
+      actionLabel: "Start Offboarding",
       onClick: c.startOffboarding,
     },
     {
+      count: documentsCount,
+      statusText: `${documentsCount === 1 ? "Document" : "Documents"} pending review`,
       icon: FileText,
       title: "Review Documents",
       description: "Review employment forms, acknowledgements, and records.",
+      actionLabel: "Review Documents",
       onClick: () => c.navigate("/documents"),
     },
     {
+      count: orientationCount,
+      statusText: `${orientationCount === 1 ? "Orientation" : "Orientations"} scheduled`,
       icon: CalendarDays,
       title: "Plan Orientation",
       description: "Schedule first-day sessions, locations, and orientation hosts.",
+      actionLabel: "Plan Orientation",
       onClick: () => c.navigate("/orientation"),
     },
   ];
@@ -346,14 +379,18 @@ function HRDashboard({ c }) {
   return (
     <div className="hr-dashboard-v2">
       <div className="hr-action-grid">
-        {hrActions.map(({ icon: Icon, title, description, onClick }) => (
+        {hrActions.map(({ icon: Icon, title, description, statusText, actionLabel, onClick, count }) => (
           <button className="hr-action-card" key={title} onClick={onClick}>
             <span className="hr-action-icon"><Icon /></span>
             <span className="hr-action-copy">
               <strong>{title}</strong>
               <small>{description}</small>
             </span>
-            <span className="hr-action-plus" aria-hidden="true"><Plus /></span>
+            <span className="hr-action-stat">
+              <em className="hr-action-count">{count}</em>
+              <small>{statusText}</small>
+            </span>
+            <span className="hr-action-button" aria-hidden="true"><Plus /> {actionLabel}</span>
           </button>
         ))}
       </div>

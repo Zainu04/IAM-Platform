@@ -68,7 +68,7 @@ app.patch("/api/employees/:id/steps/:stepId", requireAuth, allowRoles("IT_MANAGE
     step.done = true; step.completedAt = new Date().toISOString(); step.details = req.body?.details || {};
     employee.progress = Math.round(employee.steps.filter(s=>s.done).length / employee.steps.length * 100);
     employee.status = employee.progress === 100 ? (employee.type === "offboarding" ? "Archived" : "Completed") : "In Progress";
-    const map = {"assign-equipment":"EQUIPMENT_ASSIGNED","provision-access":"ACCESS_PROVISIONED","collect-documents":"DOCUMENTS_APPROVED","send-welcome":"WELCOME_SENT","schedule-orientation":"ORIENTATION_SCHEDULED","revoke-access":"ACCESS_REVOKED","collect-equipment":"EQUIPMENT_COLLECTED","notify-teams":"TEAMS_NOTIFIED","transfer-files":"FILES_TRANSFERRED","exit-interview":"EXIT_INTERVIEW_COMPLETED","archive-employee":"EMPLOYEE_ARCHIVED"};
+    const map = {"assign-equipment":"EQUIPMENT_ASSIGNED","provision-access":"ACCESS_PROVISIONED","collect-documents":"DOCUMENTS_APPROVED","send-welcome":"WELCOME_SENT","schedule-orientation":"ORIENTATION_SCHEDULED","revoke-access":"ACCESS_REVOKED","collect-equipment":"EQUIPMENT_COLLECTED","notify-teams":"TEAMS_NOTIFIED","transfer-files":"FILES_TRANSFERRED","archive-employee":"EMPLOYEE_ARCHIVED"};
     completeMatchingTasks(data, employee.id, map[step.id], req.user.sub);
     data.notifications.unshift({ id:makeId("notification"), text:`${step.label} completed for ${employee.name}`, read:false, createdAt:new Date().toISOString() });
     addAudit(data, req, "WORKFLOW_STEP_COMPLETED", "employee", employee.id, { stepId: step.id, progress: employee.progress });

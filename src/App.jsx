@@ -17,6 +17,7 @@ import Orientation from "./pages/Orientation.jsx";
 import Accounts from "./pages/Accounts.jsx";
 import Tasks from "./pages/Tasks.jsx";
 import AuditHistory from "./pages/AuditHistory.jsx";
+import DepartmentAccess from "./pages/DepartmentAccess.jsx";
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/offboarding/:employeeId" element={<ProtectedRoute roles={["HR_MANAGER"]}><Offboarding /></ProtectedRoute>} />
         <Route path="/equipment" element={<ProtectedRoute roles={["IT_MANAGER"]}><EquipmentInventory /></ProtectedRoute>} />
         <Route path="/access-requests" element={<ProtectedRoute roles={["IT_MANAGER"]}><AccessRequests /></ProtectedRoute>} />
+        <Route path="/department-access" element={<ProtectedRoute roles={["IT_MANAGER"]}><DepartmentAccess /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute roles={["IT_MANAGER", "HR_MANAGER"]}><Notifications /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute roles={["HR_MANAGER", "AUDITOR"]}><Reports /></ProtectedRoute>} />
         <Route path="/documents" element={<ProtectedRoute roles={["HR_MANAGER"]}><Documents /></ProtectedRoute>} />

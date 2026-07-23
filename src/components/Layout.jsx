@@ -11,7 +11,9 @@ const INITIAL_EMPLOYEES = [
   { id:"emp-1", name:"Emily Carter", role:"UX Designer", department:"Design", email:"emily.carter@journeyone.com", avatar:"https://i.pravatar.cc/100?img=47", type:"onboarding", startLabel:"Starts Jul 28", startDate:"2026-07-28", progress:60, nextStep:{label:"Assign Laptop",icon:"laptop",due:"Today"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Provision accounts",done:true},{id:"s4",label:"Assign laptop",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
   { id:"emp-2", name:"Marcus Lee", role:"Software Engineer", department:"Engineering", email:"marcus.lee@journeyone.com", avatar:"https://i.pravatar.cc/100?img=12", type:"onboarding", startLabel:"Starts Jul 29", startDate:"2026-07-29", progress:40, nextStep:{label:"Approve Access",icon:"shield",due:"Tomorrow"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Approve system access",done:false},{id:"s4",label:"Assign equipment",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
   { id:"emp-3", name:"Ava Patel", role:"Marketing Associate", department:"Marketing", email:"ava.patel@journeyone.com", avatar:"https://i.pravatar.cc/100?img=32", type:"onboarding", startLabel:"Starts Aug 2", startDate:"2026-08-02", progress:20, nextStep:{label:"Upload Documents",icon:"file",due:"2 days"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Upload signed documents",done:false},{id:"s3",label:"Approve system access",done:false},{id:"s4",label:"Assign equipment",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
-  { id:"emp-4", name:"Daniel Brooks", role:"IT Support Specialist", department:"Information Technology", email:"daniel.brooks@journeyone.com", avatar:"https://i.pravatar.cc/100?img=51", type:"offboarding", startLabel:"Last Day: May 30", startDate:"2026-05-30", progress:80, nextStep:{label:"Collect Equipment",icon:"mail",due:"Today"}, steps:[{id:"s1",label:"Revoke system access",done:true},{id:"s2",label:"Transfer ownership of files",done:true},{id:"s3",label:"Exit interview",done:true},{id:"s4",label:"Collect badge & equipment",done:false},{id:"s5",label:"Final paycheck processed",done:false}]}
+  { id:"emp-4", name:"Daniel Brooks", role:"IT Support Specialist", department:"Information Technology", email:"daniel.brooks@journeyone.com", avatar:"https://i.pravatar.cc/100?img=51", type:"offboarding", startLabel:"Last Day: May 30", startDate:"2026-05-30", progress:80, nextStep:{label:"Collect Equipment",icon:"mail",due:"Today"}, steps:[{id:"notify-teams",label:"Notify IT and manager",done:true},{id:"revoke-access",label:"Disable accounts and revoke access",done:true},{id:"transfer-files",label:"Transfer files and ownership",done:true},{id:"collect-equipment",label:"Collect company equipment",done:false},{id:"archive-employee",label:"Archive employee record",done:false}]},
+  { id:"emp-5", name:"Sofia Ramirez", role:"HR Coordinator", department:"Human Resources", email:"sofia.ramirez@journeyone.com", avatar:"https://i.pravatar.cc/100?img=44", type:"onboarding", startLabel:"Starts Aug 4", startDate:"2026-08-04", progress:20, nextStep:{label:"Collect Documents",icon:"file",due:"3 days"}, steps:[{id:"send-welcome",label:"Send offer & welcome letter",done:true},{id:"collect-documents",label:"Collect signed documents",done:false},{id:"provision-access",label:"Provision accounts and access",done:false},{id:"assign-equipment",label:"Assign laptop and equipment",done:false},{id:"schedule-orientation",label:"Schedule first-day orientation",done:false}]},
+  { id:"emp-6", name:"Noah Williams", role:"Financial Analyst", department:"Finance", email:"noah.williams@journeyone.com", avatar:"https://i.pravatar.cc/100?img=15", type:"offboarding", startLabel:"Last Day: Aug 8", startDate:"2026-08-08", progress:20, nextStep:{label:"Disable Accounts",icon:"shield",due:"Tomorrow"}, steps:[{id:"notify-teams",label:"Notify IT and manager",done:true},{id:"revoke-access",label:"Disable accounts and revoke access",done:false},{id:"transfer-files",label:"Transfer files and ownership",done:false},{id:"collect-equipment",label:"Collect company equipment",done:false},{id:"archive-employee",label:"Archive employee record",done:false}]}
 ];
 const INITIAL_TASKS=[
 {id:"task-1",employeeId:"emp-1",actionType:"EQUIPMENT_ASSIGNED",label:"Assign laptop for Emily Carter",subLabel:"Onboarding",priority:"High",icon:"laptop",assignedRole:"IT Manager",dueDate:"2026-07-26",status:"OPEN",done:false},
@@ -66,7 +68,6 @@ function normalizeEmployees(employees) {
     { id: "revoke-access", label: "Disable accounts and revoke access", description: "Disable company accounts and remove all approved system permissions.", icon: "shield" },
     { id: "transfer-files", label: "Transfer files and ownership", description: "Choose who will receive the employee's files, projects, and shared resources.", icon: "files" },
     { id: "collect-equipment", label: "Collect company equipment", description: "Confirm the return of assigned devices, badge, and accessories.", icon: "laptop" },
-    { id: "exit-interview", label: "Complete exit interview", description: "Record the departure reason, interview notes, and handoff feedback.", icon: "message" },
     { id: "archive-employee", label: "Archive employee record", description: "Review the completed checklist and archive the employee's record.", icon: "archive" },
   ];
 
@@ -378,7 +379,7 @@ export default function Layout() {
   const [employees, setEmployees] = useState(() =>
     normalizeEmployees(load("jo-employees", INITIAL_EMPLOYEES))
   );
-  const [tasks, setTasks] = useState(() => load("jo-tasks", INITIAL_TASKS));
+  const [tasks, setTasks] = useState(() => load("jo-tasks", INITIAL_TASKS).filter((task) => task.actionType !== "EXIT_INTERVIEW_COMPLETED" && !/exit interview/i.test(task.label || "")));
   const [accessRequests, setAccessRequests] = useState(() =>
     load("jo-access", INITIAL_ACCESS)
   );
@@ -529,7 +530,6 @@ export default function Layout() {
       { id:"task-hr-welcome-emily", employeeId:"emp-1", actionType:"WELCOME_SENT", label:"Send first-day reminder to Emily Carter", subLabel:"Onboarding", priority:"High", assignedRole:"HR Manager", dueDate:"2026-07-27", status:"OPEN", done:false, route:"/onboarding/emp-1" },
       { id:"task-hr-orientation-marcus", employeeId:"emp-2", actionType:"ORIENTATION_SCHEDULED", label:"Schedule orientation for Marcus Lee", subLabel:"Onboarding", priority:"Medium", assignedRole:"HR Manager", dueDate:"2026-07-28", status:"OPEN", done:false, route:"/orientation" },
       { id:"task-hr-documents-ava", employeeId:"emp-3", actionType:"DOCUMENTS_APPROVED", label:"Review signed documents for Ava Patel", subLabel:"Onboarding", priority:"High", assignedRole:"HR Manager", dueDate:"2026-07-26", status:"OPEN", done:false, route:"/documents" },
-      { id:"task-hr-exit-daniel", employeeId:"emp-4", actionType:"EXIT_INTERVIEW_COMPLETED", label:"Complete exit interview for Daniel Brooks", subLabel:"Offboarding", priority:"Medium", assignedRole:"HR Manager", dueDate:"2026-07-30", status:"OPEN", done:false, route:"/offboarding/emp-4" },
     ];
     setTasks((previous) => {
       const ids = new Set(previous.map((task) => task.id));
@@ -566,7 +566,7 @@ export default function Layout() {
       "send-welcome":"WELCOME_SENT", "collect-documents":"DOCUMENTS_APPROVED", "provision-access":"ACCESS_PROVISIONED",
       "assign-equipment":"EQUIPMENT_ASSIGNED", "schedule-orientation":"ORIENTATION_SCHEDULED", "notify-teams":"TEAMS_NOTIFIED",
       "revoke-access":"ACCESS_REVOKED", "transfer-files":"FILES_TRANSFERRED", "collect-equipment":"EQUIPMENT_COLLECTED",
-      "exit-interview":"EXIT_INTERVIEW_COMPLETED", "archive-employee":"EMPLOYEE_ARCHIVED"
+      "archive-employee":"EMPLOYEE_ARCHIVED"
     };
     const ownerByAction = { WELCOME_SENT:"HR Manager", DOCUMENTS_APPROVED:"HR Manager", ACCESS_PROVISIONED:"IT Manager", EQUIPMENT_ASSIGNED:"IT Manager", ORIENTATION_SCHEDULED:"HR Manager", TEAMS_NOTIFIED:"HR Manager", ACCESS_REVOKED:"IT Manager", FILES_TRANSFERRED:"HR Manager", EQUIPMENT_COLLECTED:"IT Manager", EXIT_INTERVIEW_COMPLETED:"HR Manager", EMPLOYEE_ARCHIVED:"HR Manager" };
     const newTasks = employee.steps.map((step, index) => ({
@@ -754,7 +754,7 @@ export default function Layout() {
       );
     }
 
-    const offboardingAction = {"notify-teams":"TEAMS_NOTIFIED","revoke-access":"ACCESS_REVOKED","transfer-files":"FILES_TRANSFERRED","collect-equipment":"EQUIPMENT_COLLECTED","exit-interview":"EXIT_INTERVIEW_COMPLETED","archive-employee":"EMPLOYEE_ARCHIVED"}[stepId];
+    const offboardingAction = {"notify-teams":"TEAMS_NOTIFIED","revoke-access":"ACCESS_REVOKED","transfer-files":"FILES_TRANSFERRED","collect-equipment":"EQUIPMENT_COLLECTED","archive-employee":"EMPLOYEE_ARCHIVED"}[stepId];
     if (offboardingAction) completeTaskFor(employeeId, offboardingAction);
     recordAudit(offboardingAction || "WORKFLOW_STEP_COMPLETED", "employee", employeeId, { ...details, stepId, workflow: "offboarding", employeeName, category: completedLabel, system: stepId === "revoke-access" ? "Identity & Access Management" : "JourneyOne Offboarding", proof: `${completedLabel} completed for ${employeeName}.` });
     safeApi(`/employees/${employeeId}/steps/${stepId}`, { method:"PATCH", body:JSON.stringify({ details }) });
@@ -823,7 +823,6 @@ export default function Layout() {
       { id: "revoke-access", label: "Disable accounts and revoke access", description: "Disable company accounts and remove all approved system permissions.", icon: "shield", done: false },
       { id: "transfer-files", label: "Transfer files and ownership", description: "Choose who will receive the employee's files, projects, and shared resources.", icon: "files", done: false },
       { id: "collect-equipment", label: "Collect company equipment", description: "Confirm the return of assigned devices, badge, and accessories.", icon: "laptop", done: false },
-      { id: "exit-interview", label: "Complete exit interview", description: "Record the departure reason, interview notes, and handoff feedback.", icon: "message", done: false },
       { id: "archive-employee", label: "Archive employee record", description: "Review the completed checklist and archive the employee's record.", icon: "archive", done: false },
     ];
 

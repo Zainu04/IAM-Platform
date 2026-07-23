@@ -10,7 +10,6 @@ const actionMap = {
   "collect-equipment": "EQUIPMENT_COLLECTED",
   "notify-teams": "TEAMS_NOTIFIED",
   "transfer-files": "FILES_TRANSFERRED",
-  "exit-interview": "EXIT_INTERVIEW_COMPLETED",
   "archive-employee": "EMPLOYEE_ARCHIVED"
 };
 
@@ -33,7 +32,7 @@ export function createWorkflowTasks(data, employee) {
     WELCOME_SENT: "HR_MANAGER", DOCUMENTS_APPROVED: "HR_MANAGER", ACCESS_PROVISIONED: "IT_MANAGER",
     EQUIPMENT_ASSIGNED: "IT_MANAGER", ORIENTATION_SCHEDULED: "HR_MANAGER", TEAMS_NOTIFIED: "HR_MANAGER",
     ACCESS_REVOKED: "IT_MANAGER", FILES_TRANSFERRED: "HR_MANAGER", EQUIPMENT_COLLECTED: "IT_MANAGER",
-    EXIT_INTERVIEW_COMPLETED: "HR_MANAGER", EMPLOYEE_ARCHIVED: "HR_MANAGER"
+EMPLOYEE_ARCHIVED: "HR_MANAGER"
   };
   const labels = {
     WELCOME_SENT: `Send welcome letter to ${employee.name}`,
@@ -45,7 +44,6 @@ export function createWorkflowTasks(data, employee) {
     ACCESS_REVOKED: `Disable accounts for ${employee.name}`,
     FILES_TRANSFERRED: `Transfer files owned by ${employee.name}`,
     EQUIPMENT_COLLECTED: `Collect equipment from ${employee.name}`,
-    EXIT_INTERVIEW_COMPLETED: `Complete exit interview with ${employee.name}`,
     EMPLOYEE_ARCHIVED: `Archive ${employee.name}'s employee record`
   };
   employee.steps.forEach((step, index) => {
