@@ -13,7 +13,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const app = express();
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https://i.pravatar.cc",
+          "https://api.dicebear.com"
+        ],
+      },
+    },
+  })
+);
 app.use(cors({ origin: process.env.CLIENT_URL?.split(",") || true, credentials: true }));
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("tiny"));
