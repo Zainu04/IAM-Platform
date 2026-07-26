@@ -9,6 +9,10 @@ import { readStore, updateStore, makeId } from "./lib/store.js";
 import { signUser, requireAuth, allowRoles } from "./lib/auth.js";
 import { addAudit } from "./lib/audit.js";
 import { completeMatchingTasks, createWorkflowTasks } from "./lib/automation.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const app = express();
 app.use(helmet());
@@ -208,5 +212,20 @@ app.get("/api/metrics", requireAuth, async(_req,res)=>{const data=await readStor
 app.post("/api/integrations/email/preview", requireAuth, allowRoles("HR_MANAGER"), (req,res)=>res.json({mode:"preview",to:req.body.to,subject:req.body.subject,accepted:true,message:"Email integration is configured in safe preview mode. Set SMTP variables to send real messages."}));
 app.post("/api/integrations/calendar/orientations", requireAuth, allowRoles("HR_MANAGER"), async(req,res)=>{const parsed=z.object({employeeId:z.string(),employeeName:z.string(),startsAt:z.string(),host:z.string(),location:z.string()}).safeParse(req.body);if(!parsed.success)return res.status(400).json({error:"Invalid orientation data"});const event=await updateStore(data=>{const event={id:makeId("orientation"),...parsed.data,createdAt:new Date().toISOString()};data.orientations.push(event);completeMatchingTasks(data,event.employeeId,"ORIENTATION_SCHEDULED",req.user.sub);addAudit(data,req,"ORIENTATION_SCHEDULED","orientation",event.id,{employeeId:event.employeeId});return event;});res.status(201).json(event);});
 
-app.use((err,_req,res,_next)=>{console.error(err);res.status(500).json({error:"Unexpected server error"});});
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../dist")));
+
+  app.get("/*", (_req, res) => {
+    res.sendFile(path.join(__dirname, "../dist/index.html"));
+  });
+}
+
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  res.status(500).json({ error: "Unexpected server error" });
+});
+
 export default app;
