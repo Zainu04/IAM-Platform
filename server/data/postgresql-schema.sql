@@ -1,0 +1,10 @@
+CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL, title TEXT);
+CREATE TABLE employees (id TEXT PRIMARY KEY, profile_id TEXT, name TEXT NOT NULL, email TEXT NOT NULL, role TEXT NOT NULL, department TEXT NOT NULL, journey_type TEXT NOT NULL, start_date DATE NOT NULL, status TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE workflow_steps (id TEXT PRIMARY KEY, employee_id TEXT REFERENCES employees(id) ON DELETE CASCADE, step_key TEXT NOT NULL, label TEXT NOT NULL, completed_at TIMESTAMPTZ, details JSONB NOT NULL DEFAULT '{}');
+CREATE TABLE tasks (id TEXT PRIMARY KEY, employee_id TEXT REFERENCES employees(id), action_type TEXT NOT NULL, label TEXT NOT NULL, priority TEXT NOT NULL, assigned_role TEXT, due_date DATE, status TEXT NOT NULL, completed_at TIMESTAMPTZ, completed_by TEXT REFERENCES users(id));
+CREATE TABLE equipment (id TEXT PRIMARY KEY, item TEXT NOT NULL, asset_tag TEXT UNIQUE NOT NULL, employee_id TEXT REFERENCES employees(id), assigned_to TEXT, status TEXT NOT NULL, assigned_at TIMESTAMPTZ, returned_at TIMESTAMPTZ);
+CREATE TABLE access_requests (id TEXT PRIMARY KEY, employee_id TEXT REFERENCES employees(id), system_name TEXT NOT NULL, status TEXT NOT NULL, reason TEXT, decided_by TEXT REFERENCES users(id), decided_at TIMESTAMPTZ);
+CREATE TABLE notifications (id TEXT PRIMARY KEY, user_id TEXT REFERENCES users(id), text TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE audit_logs (id TEXT PRIMARY KEY, actor_id TEXT, actor_name TEXT, actor_role TEXT, action TEXT NOT NULL, resource_type TEXT NOT NULL, resource_id TEXT, details JSONB NOT NULL DEFAULT '{}', ip TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE INDEX tasks_employee_action_idx ON tasks(employee_id, action_type, status);
+CREATE INDEX audit_logs_created_idx ON audit_logs(created_at DESC);

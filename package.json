@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server/index.js",
+    "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
@@ -14,7 +19,24 @@
     "react": "latest",
     "react-dom": "latest",
     "react-router-dom": "latest",
-    "lucide-react": "latest"
+    "lucide-react": "latest",
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^3.0.2",
+    "zod": "^3.25.0",
+    "nodemailer": "^7.0.0",
+    "pg": "^8.13.0",
+    "dotenv": "^16.4.5"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "vitest": "^3.2.0",
+    "supertest": "^7.1.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "jsdom": "^26.1.0"
+  }
 }

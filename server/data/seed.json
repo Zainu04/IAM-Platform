@@ -1,0 +1,41 @@
+{
+  "users": [
+    {
+      "id": "user-1",
+      "name": "Zainab Akhtar",
+      "email": "zainab@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "IT_MANAGER",
+      "title": "IT Manager"
+    },
+    {
+      "id": "user-2",
+      "name": "Hannah Reyes",
+      "email": "hr@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "HR_MANAGER",
+      "title": "HR Manager"
+    },
+    {
+      "id": "user-3",
+      "name": "Avery Chen",
+      "email": "auditor@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "AUDITOR",
+      "title": "Compliance Auditor"
+    }
+  ],
+  "employees": [],
+  "tasks": [],
+  "equipment": [],
+  "accessRequests": [],
+  "notifications": [],
+  "departments": [
+    { "id": "dep-1", "name": "Engineering", "systems": ["GitHub", "Jira", "AWS", "Slack"], "color": "#7a1130" },
+    { "id": "dep-2", "name": "Design", "systems": ["Figma", "Adobe Creative Cloud", "Slack"], "color": "#c9922f" },
+    { "id": "dep-3", "name": "Marketing", "systems": ["HubSpot", "Analytics Suite", "Canva"], "color": "#2c8a4b" },
+    { "id": "dep-4", "name": "Information Technology", "systems": ["Microsoft 365 Admin", "Okta", "Service Desk"], "color": "#5b5bd6" }
+  ],
+  "auditLogs": [],
+  "orientations": []
+}

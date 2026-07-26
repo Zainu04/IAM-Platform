@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Search,
   Bell,
   ChevronDown,
-  User,
-  Settings,
   LogOut,
+  Search,
+  Settings,
+  User,
 } from "lucide-react";
 
 export default function TopNavbar({
@@ -14,112 +14,121 @@ export default function TopNavbar({
   currentUser,
   openEmployee,
   navigate,
+  signOut,
 }) {
-  const [q, setQ] = useState("");
-  const [showN, setShowN] = useState(false);
-  const [showP, setShowP] = useState(false);
-
-  const nref = useRef();
-  const pref = useRef();
+  const [query, setQuery] = useState("");
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
 
   useEffect(() => {
-    const h = (e) => {
-      if (nref.current && !nref.current.contains(e.target)) {
-        setShowN(false);
+    function handleOutsideClick(event) {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
       }
 
-      if (pref.current && !pref.current.contains(e.target)) {
-        setShowP(false);
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfile(false);
       }
-    };
+    }
 
-    document.addEventListener("mousedown", h);
-
-    return () => document.removeEventListener("mousedown", h);
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  const results = q
-    ? employees.filter((e) =>
-        (e.name + e.role).toLowerCase().includes(q.toLowerCase())
+  const results = query
+    ? employees.filter((employee) =>
+        `${employee.name} ${employee.role} ${employee.department}`
+          .toLowerCase()
+          .includes(query.toLowerCase())
       )
     : [];
 
-  const unread = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read
+  ).length;
+
+  function closeMenus() {
+    setShowNotifications(false);
+    setShowProfile(false);
+  }
 
   return (
-    <div className="topbar">
-      {/* Search */}
+    <header className="topbar">
       <div className="search-box">
-        <Search />
-
+        <Search aria-hidden="true" />
         <input
+          type="search"
           placeholder="Search employees, requests, equipment..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="Search JourneyOne"
         />
 
-        {q && (
+        {query && (
           <div className="search-results">
-            {results.map((r) => (
+            {results.map((employee) => (
               <button
-                key={r.id}
+                type="button"
+                key={employee.id}
                 className="search-result-row"
                 onClick={() => {
-                  openEmployee(r);
-                  setQ("");
+                  openEmployee(employee);
+                  setQuery("");
                 }}
               >
-                <img src={r.avatar} />
-
+                <img src={employee.avatar} alt="" />
                 <div>
-                  <strong>{r.name}</strong>
-                  <small>{r.role}</small>
+                  <strong>{employee.name}</strong>
+                  <small>{employee.role}</small>
                 </div>
               </button>
             ))}
 
             {!results.length && (
-              <div className="search-empty">
-                No matches for "{q}"
-              </div>
+              <div className="search-empty">No matches for “{query}”</div>
             )}
           </div>
         )}
       </div>
 
-      {/* Right Side */}
       <div className="topbar-right">
-
-        {/* Notifications */}
-        <div ref={nref} className="relative">
+        <div ref={notificationsRef} className="relative">
           <button
+            type="button"
             className="bell-btn"
+            aria-label="Open notifications"
             onClick={() => {
-              setShowN(!showN);
-              setShowP(false);
+              setShowNotifications((current) => !current);
+              setShowProfile(false);
             }}
           >
             <Bell />
-
-            {unread > 0 && (
-              <span className="bell-badge">{unread}</span>
+            {unreadCount > 0 && (
+              <span className="bell-badge">{unreadCount}</span>
             )}
           </button>
 
-          {showN && (
-            <div className="dropdown-panel">
+          {showNotifications && (
+            <div className="dropdown-panel notification-dropdown">
               <h4>Notifications</h4>
-
-              {notifications.slice(0, 4).map((n) => (
-                <div className="notif-row" key={n.id}>
-                  <p>{n.text}</p>
-                  <span>{n.time}</span>
+              {notifications.slice(0, 4).map((notification) => (
+                <div className="notif-row" key={notification.id}>
+                  <p>{notification.text}</p>
+                  <span>{notification.time}</span>
                 </div>
               ))}
-
               <button
+                type="button"
                 className="menu-item"
-                onClick={() => navigate("/notifications")}
+                onClick={() => {
+                  closeMenus();
+                  navigate("/notifications");
+                }}
               >
                 View all notifications
               </button>
@@ -127,45 +136,56 @@ export default function TopNavbar({
           )}
         </div>
 
-        {/* Profile */}
-        <div ref={pref} className="relative">
+        <div ref={profileRef} className="relative">
           <button
-            className="greeting-btn"
+            type="button"
+            className="profile-trigger"
+            aria-label="Open profile menu"
+            aria-expanded={showProfile}
             onClick={() => {
-              setShowP(!showP);
-              setShowN(false);
+              setShowProfile((current) => !current);
+              setShowNotifications(false);
             }}
           >
-            <span className="greeting">
-              Good morning, {currentUser.firstName} 👋
+            {currentUser.avatar ? <img src={currentUser.avatar} alt="" /> : <span className="profile-initials" aria-hidden="true">{currentUser.name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</span>}
+            <span className="profile-trigger-text">
+              <strong>{currentUser.name}</strong>
+              <small>{currentUser.title}</small>
             </span>
-
-            <img src={currentUser.avatar} />
-
             <ChevronDown className="chev" />
           </button>
 
-          {showP && (
-            <div className="dropdown-panel">
+          {showProfile && (
+            <div className="dropdown-panel profile-dropdown">
               <button
+                type="button"
                 className="menu-item"
-                onClick={() => navigate("/settings")}
+                onClick={() => {
+                  closeMenus();
+                  navigate("/settings");
+                }}
               >
                 <User />
                 View profile
               </button>
-
               <button
+                type="button"
                 className="menu-item"
-                onClick={() => navigate("/settings")}
+                onClick={() => {
+                  closeMenus();
+                  navigate("/settings");
+                }}
               >
                 <Settings />
                 Settings
               </button>
-
               <button
-                className="menu-item"
-                onClick={() => setShowP(false)}
+                type="button"
+                className="menu-item sign-out-item"
+                onClick={() => {
+                  closeMenus();
+                  signOut();
+                }}
               >
                 <LogOut />
                 Sign out
@@ -174,6 +194,6 @@ export default function TopNavbar({
           )}
         </div>
       </div>
-    </div>
+    </header>
   );
 }
