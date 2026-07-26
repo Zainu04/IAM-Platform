@@ -11,8 +11,6 @@ import { addAudit } from "./lib/audit.js";
 import { completeMatchingTasks, createWorkflowTasks } from "./lib/automation.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 const app = express();
 app.use(helmet());
