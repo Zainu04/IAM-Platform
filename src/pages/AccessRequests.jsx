@@ -14,8 +14,12 @@ export default function AccessRequests() {
   useEffect(() => {
     if (!focusId) return;
     const node = rowRefs.current[focusId];
-    if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (node) { node.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    const firstMatch = c.accessRequests.find((r) => r.employeeId === focusId);
+    if (firstMatch) rowRefs.current[firstMatch.id]?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusId, c.accessRequests]);
+
+  const isFocused = (r) => focusId === r.id || focusId === r.employeeId;
 
   function table(rows, actions) {
     return (
@@ -28,7 +32,7 @@ export default function AccessRequests() {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} ref={(node) => (rowRefs.current[r.id] = node)} className={focusId === r.id ? "row-highlight" : ""}>
+            <tr key={r.id} ref={(node) => (rowRefs.current[r.id] = node)} className={isFocused(r) ? "row-highlight" : ""}>
               <td><div className="table-person"><img src={r.avatar} alt="" /><strong>{r.name}</strong></div></td>
               <td>{r.system}</td>
               <td>{r.requested}</td>

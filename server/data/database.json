@@ -1,0 +1,318 @@
+{
+  "users": [
+    {
+      "id": "user-1",
+      "name": "Zainab Akhtar",
+      "email": "zainab@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "IT_MANAGER",
+      "title": "IT Manager"
+    },
+    {
+      "id": "user-2",
+      "name": "Hannah Reyes",
+      "email": "hr@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "HR_MANAGER",
+      "title": "HR Manager"
+    },
+    {
+      "id": "user-3",
+      "name": "Avery Chen",
+      "email": "auditor@journeyone.local",
+      "passwordHash": "$2b$10$O.nRQQJruHWIGUR9ZjDqrugiOMa6xVWx6alLEm.jGy.ZTFMmJUW3S",
+      "role": "AUDITOR",
+      "title": "Compliance Auditor"
+    }
+  ],
+  "employees": [
+    {
+      "name": "Mya Daly",
+      "email": "myadaly@gmail.com",
+      "role": "Product Designer",
+      "department": "Design",
+      "id": "emp-1784840407271",
+      "profileId": "profile-1784840407271",
+      "type": "onboarding",
+      "startDate": "2026-07-30",
+      "steps": [
+        {
+          "id": "send-welcome",
+          "label": "Send offer & welcome letter",
+          "done": true,
+          "completedAt": "2026-07-23T21:00:10.623Z",
+          "details": {
+            "employeeName": "Mya Daly",
+            "employeeAvatar": "https://i.pravatar.cc/100?u=profile-1784840407271",
+            "subject": "Welcome to JourneyOne, Mya!",
+            "message": "Hi Mya,\n\nWe are excited to welcome you to the Design team as our new Product Designer. Your start date is Jul 30. Please review the attached offer details and first-day information.\n\nWelcome aboard!",
+            "sentTo": "myadaly@gmail.com"
+          }
+        },
+        {
+          "id": "collect-documents",
+          "label": "Collect signed documents",
+          "done": true,
+          "completedAt": "2026-07-23T21:00:18.696Z",
+          "details": {
+            "employeeName": "Mya Daly",
+            "employeeAvatar": "https://i.pravatar.cc/100?u=profile-1784840407271",
+            "documents": [
+              {
+                "name": "ITCapstone_DevelopmentGuide.pdf",
+                "size": 1950278,
+                "type": "application/pdf"
+              }
+            ]
+          }
+        },
+        {
+          "id": "provision-access",
+          "label": "Provision accounts and access",
+          "done": true,
+          "completedAt": "2026-07-23T21:00:22.109Z",
+          "details": {
+            "employeeName": "Mya Daly",
+            "employeeAvatar": "https://i.pravatar.cc/100?u=profile-1784840407271",
+            "systems": [
+              "Figma"
+            ]
+          }
+        },
+        {
+          "id": "assign-equipment",
+          "label": "Assign laptop and equipment",
+          "done": true,
+          "completedAt": "2026-07-23T21:00:27.092Z",
+          "details": {
+            "employeeName": "Mya Daly",
+            "employeeAvatar": "https://i.pravatar.cc/100?u=profile-1784840407271",
+            "equipmentId": "eq-3",
+            "item": "iPhone 15",
+            "assetTag": "JO-2026"
+          }
+        },
+        {
+          "id": "schedule-orientation",
+          "label": "Schedule first-day orientation",
+          "done": true,
+          "completedAt": "2026-07-23T21:00:35.140Z",
+          "details": {
+            "employeeName": "Mya Daly",
+            "employeeAvatar": "https://i.pravatar.cc/100?u=profile-1784840407271",
+            "date": "2026-07-30",
+            "time": "09:00",
+            "location": "Main Office - Conference Room A",
+            "host": "Hannah Reyes"
+          }
+        }
+      ],
+      "progress": 100,
+      "status": "Completed",
+      "createdAt": "2026-07-23T21:00:07.299Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-1784840407299-a84oml",
+      "employeeId": "emp-1784840407271",
+      "actionType": "WELCOME_SENT",
+      "label": "Send welcome letter to Mya Daly",
+      "subLabel": "Onboarding",
+      "priority": "High",
+      "assignedRole": "HR_MANAGER",
+      "dueDate": "2026-07-30",
+      "status": "COMPLETED",
+      "done": true,
+      "createdAt": "2026-07-23T21:00:07.300Z",
+      "completedAt": "2026-07-23T21:00:10.623Z",
+      "completedBy": "user-2"
+    },
+    {
+      "id": "task-1784840407300-u8qrzg",
+      "employeeId": "emp-1784840407271",
+      "actionType": "DOCUMENTS_APPROVED",
+      "label": "Review documents for Mya Daly",
+      "subLabel": "Onboarding",
+      "priority": "High",
+      "assignedRole": "HR_MANAGER",
+      "dueDate": "2026-07-30",
+      "status": "COMPLETED",
+      "done": true,
+      "createdAt": "2026-07-23T21:00:07.300Z",
+      "completedAt": "2026-07-23T21:00:18.696Z",
+      "completedBy": "user-2"
+    },
+    {
+      "id": "task-1784840407300-yqo2mb",
+      "employeeId": "emp-1784840407271",
+      "actionType": "ACCESS_PROVISIONED",
+      "label": "Provision system access for Mya Daly",
+      "subLabel": "Onboarding",
+      "priority": "Medium",
+      "assignedRole": "IT_MANAGER",
+      "dueDate": "2026-07-30",
+      "status": "COMPLETED",
+      "done": true,
+      "createdAt": "2026-07-23T21:00:07.300Z",
+      "completedAt": "2026-07-23T21:00:22.109Z",
+      "completedBy": "user-2"
+    },
+    {
+      "id": "task-1784840407300-n3f4m3",
+      "employeeId": "emp-1784840407271",
+      "actionType": "EQUIPMENT_ASSIGNED",
+      "label": "Assign laptop to Mya Daly",
+      "subLabel": "Onboarding",
+      "priority": "Medium",
+      "assignedRole": "IT_MANAGER",
+      "dueDate": "2026-07-30",
+      "status": "COMPLETED",
+      "done": true,
+      "createdAt": "2026-07-23T21:00:07.300Z",
+      "completedAt": "2026-07-23T21:00:27.092Z",
+      "completedBy": "user-2"
+    },
+    {
+      "id": "task-1784840407300-ah3s1m",
+      "employeeId": "emp-1784840407271",
+      "actionType": "ORIENTATION_SCHEDULED",
+      "label": "Schedule orientation for Mya Daly",
+      "subLabel": "Onboarding",
+      "priority": "Low",
+      "assignedRole": "HR_MANAGER",
+      "dueDate": "2026-07-30",
+      "status": "COMPLETED",
+      "done": true,
+      "createdAt": "2026-07-23T21:00:07.300Z",
+      "completedAt": "2026-07-23T21:00:35.140Z",
+      "completedBy": "user-2"
+    }
+  ],
+  "equipment": [],
+  "accessRequests": [],
+  "notifications": [
+    {
+      "id": "notification-1784840435140-h54emy",
+      "text": "Schedule first-day orientation completed for Mya Daly",
+      "read": false,
+      "createdAt": "2026-07-23T21:00:35.140Z"
+    },
+    {
+      "id": "notification-1784840427092-jwem5p",
+      "text": "Assign laptop and equipment completed for Mya Daly",
+      "read": false,
+      "createdAt": "2026-07-23T21:00:27.092Z"
+    },
+    {
+      "id": "notification-1784840422109-yc367p",
+      "text": "Provision accounts and access completed for Mya Daly",
+      "read": false,
+      "createdAt": "2026-07-23T21:00:22.109Z"
+    },
+    {
+      "id": "notification-1784840418696-0pr3f5",
+      "text": "Collect signed documents completed for Mya Daly",
+      "read": false,
+      "createdAt": "2026-07-23T21:00:18.696Z"
+    },
+    {
+      "id": "notification-1784840410623-kbzbw8",
+      "text": "Send offer & welcome letter completed for Mya Daly",
+      "read": false,
+      "createdAt": "2026-07-23T21:00:10.623Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "audit-1784840435140-rbhkpg",
+      "actorId": "user-2",
+      "actorName": "Hannah Reyes",
+      "actorRole": "HR_MANAGER",
+      "action": "WORKFLOW_STEP_COMPLETED",
+      "resourceType": "employee",
+      "resourceId": "emp-1784840407271",
+      "details": {
+        "stepId": "schedule-orientation",
+        "progress": 100
+      },
+      "ip": "::1",
+      "createdAt": "2026-07-23T21:00:35.140Z"
+    },
+    {
+      "id": "audit-1784840427092-5ttpbd",
+      "actorId": "user-2",
+      "actorName": "Hannah Reyes",
+      "actorRole": "HR_MANAGER",
+      "action": "WORKFLOW_STEP_COMPLETED",
+      "resourceType": "employee",
+      "resourceId": "emp-1784840407271",
+      "details": {
+        "stepId": "assign-equipment",
+        "progress": 80
+      },
+      "ip": "::1",
+      "createdAt": "2026-07-23T21:00:27.092Z"
+    },
+    {
+      "id": "audit-1784840422109-oouxxy",
+      "actorId": "user-2",
+      "actorName": "Hannah Reyes",
+      "actorRole": "HR_MANAGER",
+      "action": "WORKFLOW_STEP_COMPLETED",
+      "resourceType": "employee",
+      "resourceId": "emp-1784840407271",
+      "details": {
+        "stepId": "provision-access",
+        "progress": 60
+      },
+      "ip": "::1",
+      "createdAt": "2026-07-23T21:00:22.109Z"
+    },
+    {
+      "id": "audit-1784840418696-01gvmy",
+      "actorId": "user-2",
+      "actorName": "Hannah Reyes",
+      "actorRole": "HR_MANAGER",
+      "action": "WORKFLOW_STEP_COMPLETED",
+      "resourceType": "employee",
+      "resourceId": "emp-1784840407271",
+      "details": {
+        "stepId": "collect-documents",
+        "progress": 40
+      },
+      "ip": "::1",
+      "createdAt": "2026-07-23T21:00:18.696Z"
+    },
+    {
+      "id": "audit-1784840410623-gox53b",
+      "actorId": "user-2",
+      "actorName": "Hannah Reyes",
+      "actorRole": "HR_MANAGER",
+      "action": "WORKFLOW_STEP_COMPLETED",
+      "resourceType": "employee",
+      "resourceId": "emp-1784840407271",
+      "details": {
+        "stepId": "send-welcome",
+        "progress": 20
+      },
+      "ip": "::1",
+      "createdAt": "2026-07-23T21:00:10.623Z"
+    },
+    {
+      "id": "audit-1784840407300-ezve1s",
+      "actorId": "user-2",
+      "actorName": "Hannah Reyes",
+      "actorRole": "HR_MANAGER",
+      "action": "EMPLOYEE_JOURNEY_CREATED",
+      "resourceType": "employee",
+      "resourceId": "emp-1784840407271",
+      "details": {
+        "type": "onboarding"
+      },
+      "ip": "::1",
+      "createdAt": "2026-07-23T21:00:07.300Z"
+    }
+  ],
+  "orientations": []
+}

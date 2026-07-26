@@ -5,6 +5,7 @@ import {
   FileStack, MessageSquare, PartyPopper,
 } from "lucide-react";
 import { getTaskRoute } from "../utils/taskRouting.js";
+import { roleLabel } from "../utils/roles.js";
 
 const ACTION_ICON = {
   EQUIPMENT_ASSIGNED: Laptop,
@@ -68,8 +69,8 @@ function TaskCard({ task, employees, onGo }) {
 
 export default function Tasks() {
   const c = useOutletContext();
-  const roleLabel = { IT_MANAGER: "IT Manager", HR_MANAGER: "HR Manager" }[c.currentUser.role];
-  const tasks = c.tasks.filter((t) => !roleLabel || t.assignedRole === roleLabel);
+  const myRole = c.currentUser.role;
+  const tasks = c.tasks.filter((t) => !myRole || t.assignedRole === myRole);
   const open = tasks.filter((t) => !t.done);
   const done = tasks.filter((t) => t.done);
   const overdue = open.filter((t) => t.dueDate && new Date(t.dueDate) < new Date());
@@ -83,7 +84,7 @@ export default function Tasks() {
       <div className="page-heading">
         <div>
           <p className="eyebrow">My workspace</p>
-          <h1>{roleLabel || "My"} Tasks</h1>
+          <h1>{(myRole && roleLabel(myRole)) || "My"} Tasks</h1>
           <p>Everything on your plate — tap a card and we'll take you straight to where it gets done.</p>
         </div>
       </div>

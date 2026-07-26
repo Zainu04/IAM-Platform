@@ -35,6 +35,85 @@ app.get("/api/bootstrap", requireAuth, async (_req, res) => {
   res.json(safe);
 });
 
+// Whole-document sync used by the frontend to replace localStorage as the
+// source of truth. The client sends whichever top-level collections it wants
+// to persist (employees, tasks, equipment, accessRequests, notifications,
+// departments, auditLogs, orientations) and we merge them into the stored
+// JSON document, preserving every field exactly as the client sent it.
+// `users` is intentionally never accepted here so this endpoint can't be used
+// to overwrite accounts or password hashes.
+const APP_STATE_KEYS = ["employees", "tasks", "equipment", "accessRequests", "notifications", "departments", "auditLogs", "orientations"];
+const appStateSchema = z.object(
+  Object.fromEntries(APP_STATE_KEYS.map(key => [key, z.array(z.any()).optional()]))
+).strict();
+
+app.get("/api/app-state", requireAuth, async (_req, res) => {
+  const data = await readStore();
+  const { users, ...safe } = data;
+  res.json(safe);
+});
+
+const IT_OWNED_STEP_IDS = new Set(["assign-equipment", "provision-access", "revoke-access", "collect-equipment"]);
+const stepOwnerRole = (stepId) => (IT_OWNED_STEP_IDS.has(stepId) ? "IT_MANAGER" : "HR_MANAGER");
+
+function findRoleViolation(existingData, incoming, actorRole) {
+  if (incoming.employees) {
+    const existingById = new Map(existingData.employees.map(e => [e.id, e]));
+    for (const employee of incoming.employees) {
+      const existing = existingById.get(employee.id);
+      if (!Array.isArray(employee.steps)) continue;
+      const existingSteps = new Map((existing?.steps || []).map(s => [s.id, s]));
+      for (const step of employee.steps) {
+        const wasDone = Boolean(existingSteps.get(step.id)?.done);
+        if (!wasDone && step.done) {
+          const requiredRole = stepOwnerRole(step.id);
+          if (actorRole !== requiredRole) {
+            return `Only ${requiredRole.replace("_", " ")} can complete the "${step.id}" step`;
+          }
+        }
+      }
+    }
+  }
+  if (incoming.tasks) {
+    const existingById = new Map(existingData.tasks.map(t => [t.id, t]));
+    for (const task of incoming.tasks) {
+      const existing = existingById.get(task.id);
+      const wasDone = existing ? (existing.status === "COMPLETED" || existing.done) : false;
+      const nowDone = task.status === "COMPLETED" || task.done;
+      if (!wasDone && nowDone && task.assignedRole && task.assignedRole !== actorRole) {
+        return `Only ${task.assignedRole.replace("_", " ")} can complete this task`;
+      }
+    }
+  }
+  if (incoming.accessRequests) {
+    const existingById = new Map(existingData.accessRequests.map(a => [a.id, a]));
+    for (const request of incoming.accessRequests) {
+      const existing = existingById.get(request.id);
+      const wasPending = existing ? existing.status === "Pending" : true;
+      if (wasPending && request.status && request.status !== "Pending" && actorRole !== "IT_MANAGER") {
+        return "Only IT Manager can approve, deny, or revoke access requests";
+      }
+    }
+  }
+  return null;
+}
+
+app.put("/api/app-state", requireAuth, async (req, res) => {
+  const parsed = appStateSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid app state payload", issues: parsed.error.issues });
+  const result = await updateStore(data => {
+    const violation = findRoleViolation(data, parsed.data, req.user.role);
+    if (violation) return { error: violation, status: 403 };
+    for (const key of APP_STATE_KEYS) {
+      if (parsed.data[key] !== undefined) data[key] = parsed.data[key];
+    }
+    const { users, ...safe } = data;
+    return { safe };
+  });
+  if (result.error) return res.status(result.status).json({ error: result.error });
+  res.json(result.safe);
+});
+
 const employeeSchema = z.object({
   name: z.string().min(2), email: z.string().email(), role: z.string().min(2), department: z.string().min(2),
   id: z.string().optional(), profileId: z.string().optional(), type: z.enum(["onboarding", "offboarding"]), startDate: z.string().min(8), steps: z.array(z.object({ id:z.string(), label:z.string(), done:z.boolean().optional() })).min(1)

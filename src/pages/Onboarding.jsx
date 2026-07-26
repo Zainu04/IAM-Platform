@@ -31,7 +31,6 @@ function TaskModal({ employee, step, context, onClose }) {
   );
   const [documents, setDocuments] = useState([]);
   const [systems, setSystems] = useState([]);
-  const [equipmentId, setEquipmentId] = useState("");
   const [orientationDate, setOrientationDate] = useState(employee.startDate || "");
   const [orientationTime, setOrientationTime] = useState("09:00");
   const [orientationLocation, setOrientationLocation] = useState("Main Office - Conference Room A");
@@ -41,9 +40,6 @@ function TaskModal({ employee, step, context, onClose }) {
     (item) => item.name.toLowerCase() === employee.department.toLowerCase()
   );
   const suggestedSystems = department?.systems || ["Microsoft 365", "Slack", "HR Portal"];
-  const availableEquipment = context.equipment.filter(
-    (item) => item.status !== "Assigned" || item.assignedTo === employee.name
-  );
 
   function toggleSystem(system) {
     setSystems((current) =>
@@ -171,7 +167,8 @@ function TaskModal({ employee, step, context, onClose }) {
           <div>
             <p className="modal-sub">
               Select the accounts and systems required for the {employee.department}
-              department.
+              department. This sends a request to IT — access is granted once IT
+              approves it in their Access Requests queue.
             </p>
             <div className="access-option-list">
               {suggestedSystems.map((system) => (
@@ -196,54 +193,18 @@ function TaskModal({ employee, step, context, onClose }) {
                 type="button"
                 className="btn-primary"
                 disabled={!systems.length}
-                onClick={() => complete({ systems })}
+                onClick={() => {
+                  context.requestAccess(employee.id, systems);
+                  onClose();
+                }}
               >
-                <ShieldCheck /> Provision access
+                <ShieldCheck /> Request access
               </button>
             </div>
           </div>
         )}
 
-        {step.id === "assign-equipment" && (
-          <div>
-            <p className="modal-sub">
-              Select an available device. Completing this task updates Equipment
-              Inventory automatically.
-            </p>
-            <div className="field">
-              <label>Available equipment</label>
-              <select value={equipmentId} onChange={(event) => setEquipmentId(event.target.value)}>
-                <option value="">Choose a device</option>
-                {availableEquipment.map((item) => (
-                  <option value={item.id} key={item.id}>
-                    {item.item} — {item.assetTag}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {!availableEquipment.length && (
-              <div className="workflow-warning">
-                There is no available equipment. Add a device in Equipment Inventory first.
-              </div>
-            )}
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!equipmentId}
-                onClick={() => {
-                  const item = context.equipment.find((equipment) => equipment.id === equipmentId);
-                  complete({ equipmentId, item: item?.item, assetTag: item?.assetTag });
-                }}
-              >
-                <Laptop /> Assign equipment
-              </button>
-            </div>
-          </div>
-        )}
+
 
         {step.id === "schedule-orientation" && (
           <div>
@@ -500,6 +461,45 @@ function OnboardingWorkflow({ context, employee }) {
               const Icon = STEP_ICONS[step.id] || FileText;
               const previousComplete = index === 0 || employee.steps[index - 1].done;
               const locked = !step.done && !previousComplete;
+              const isItOwned = step.id === "assign-equipment" || step.id === "provision-access";
+              const pendingProvisionRequest =
+                step.id === "provision-access" &&
+                context.accessRequests.some(
+                  (request) =>
+                    request.employeeId === employee.id &&
+                    request.stage === "provision" &&
+                    request.status === "Pending"
+                );
+
+              let stateLabel = step.done ? "Completed" : locked ? "Waiting" : "Ready";
+              let ctaContent = (
+                <>
+                  Start task <ChevronRight />
+                </>
+              );
+              let ctaDisabled = locked || step.done;
+              let onCta = () => setActiveStep(step);
+
+              if (!step.done && !locked && step.id === "provision-access") {
+                if (pendingProvisionRequest) {
+                  stateLabel = "Waiting on IT";
+                  ctaContent = "Requested — waiting on IT";
+                  ctaDisabled = true;
+                } else {
+                  ctaContent = (
+                    <>
+                      Request access <ChevronRight />
+                    </>
+                  );
+                }
+              }
+
+              if (!step.done && !locked && step.id === "assign-equipment") {
+                stateLabel = "Waiting on IT";
+                ctaContent = "Handled in IT's Equipment queue";
+                ctaDisabled = true;
+                onCta = undefined;
+              }
 
               return (
                 <article
@@ -518,10 +518,15 @@ function OnboardingWorkflow({ context, employee }) {
                     <div className="workflow-task-title-row">
                       <h4>{step.label}</h4>
                       <span className={`workflow-task-state ${step.done ? "done" : ""}`}>
-                        {step.done ? "Completed" : locked ? "Waiting" : "Ready"}
+                        {stateLabel}
                       </span>
                     </div>
-                    <p>{step.description || "Complete this required onboarding task."}</p>
+                    <p>
+                      {step.description ||
+                        (isItOwned
+                          ? "Owned by IT — this employee's IT dashboard picks it up automatically."
+                          : "Complete this required onboarding task.")}
+                    </p>
                     {step.done && step.details && (
                       <small className="workflow-task-record">
                         Completed and saved to this employee's journey record.
@@ -531,8 +536,8 @@ function OnboardingWorkflow({ context, employee }) {
                   <button
                     type="button"
                     className={step.done ? "btn-secondary" : "btn-primary"}
-                    disabled={locked || step.done}
-                    onClick={() => setActiveStep(step)}
+                    disabled={ctaDisabled}
+                    onClick={onCta}
                   >
                     {step.done ? (
                       <>
@@ -541,9 +546,7 @@ function OnboardingWorkflow({ context, employee }) {
                     ) : locked ? (
                       "Complete previous task"
                     ) : (
-                      <>
-                        Start task <ChevronRight />
-                      </>
+                      ctaContent
                     )}
                   </button>
                 </article>

@@ -14,6 +14,8 @@ export function getTaskRoute(task, employees = []) {
       return employee ? `/equipment?focus=${encodeURIComponent(employee.name)}` : "/equipment";
 
     case "ACCESS_PROVISIONED":
+      return employee ? `/access-requests?focus=${employee.id}` : "/access-requests";
+
     case "ACCESS_REVOKED":
       return employee ? `/accounts?focus=${employee.id}` : "/accounts";
 

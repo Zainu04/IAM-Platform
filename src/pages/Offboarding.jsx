@@ -34,15 +34,9 @@ function TaskModal({ employee, step, context, onClose }) {
   const [notificationMessage, setNotificationMessage] = useState(
     `${employee.name}'s final working day is ${employee.startLabel.replace("Last Day: ", "")}. Please complete all required handoffs before departure.`
   );
-  const [selectedSystems, setSelectedSystems] = useState(
-    approvedAccess.map((request) => request.system)
-  );
   const [transferOwner, setTransferOwner] = useState(context.currentUser.name);
   const [transferNotes, setTransferNotes] = useState(
     `Transfer shared files, project ownership, and active responsibilities from ${employee.name}.`
-  );
-  const [returnedItems, setReturnedItems] = useState(
-    assignedEquipment.map((item) => item.id)
   );
   const [archiveConfirmed, setArchiveConfirmed] = useState(false);
 
@@ -53,22 +47,6 @@ function TaskModal({ employee, step, context, onClose }) {
       ...details,
     });
     onClose();
-  }
-
-  function toggleSystem(system) {
-    setSelectedSystems((current) =>
-      current.includes(system)
-        ? current.filter((item) => item !== system)
-        : [...current, system]
-    );
-  }
-
-  function toggleEquipment(id) {
-    setReturnedItems((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id]
-    );
   }
 
   return (
@@ -128,36 +106,13 @@ function TaskModal({ employee, step, context, onClose }) {
         {step.id === "revoke-access" && (
           <div>
             <p className="modal-sub">
-              Select the accounts that should be disabled. Completing this task updates Department Access automatically.
+              This step is owned by IT. {employee.name}'s approved access
+              {approvedAccess.length ? ` (${approvedAccess.map((r) => r.system).join(", ")})` : ""}{" "}
+              will be revoked when IT disables their account in Account Administration —
+              it updates here automatically.
             </p>
-            <div className="access-option-list">
-              {(approvedAccess.length
-                ? approvedAccess.map((request) => request.system)
-                : ["Microsoft 365", "Slack", "HR Portal", "VPN"]
-              ).map((system) => (
-                <label className="access-option" key={system}>
-                  <input
-                    type="checkbox"
-                    checked={selectedSystems.includes(system)}
-                    onChange={() => toggleSystem(system)}
-                  />
-                  <span>
-                    <strong>{system}</strong>
-                    <small>Disable account and revoke employee permissions</small>
-                  </span>
-                </label>
-              ))}
-            </div>
             <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!selectedSystems.length}
-                onClick={() => complete({ systems: selectedSystems, revokedAt: new Date().toISOString() })}
-              >
-                <ShieldOff /> Revoke selected access
-              </button>
+              <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
             </div>
           </div>
         )}
@@ -196,39 +151,12 @@ function TaskModal({ employee, step, context, onClose }) {
         {step.id === "collect-equipment" && (
           <div>
             <p className="modal-sub">
-              Confirm every assigned item that has been returned. Equipment Inventory will mark returned assets as available.
+              This step is owned by IT. {assignedEquipment.length
+                ? `${employee.name}'s ${assignedEquipment.length} assigned item${assignedEquipment.length === 1 ? "" : "s"} will be marked complete automatically as IT confirms each return in Equipment Inventory.`
+                : "No assigned equipment was found — IT can confirm there's nothing outstanding from Equipment Inventory."}
             </p>
-            {assignedEquipment.length ? (
-              <div className="access-option-list">
-                {assignedEquipment.map((item) => (
-                  <label className="access-option" key={item.id}>
-                    <input
-                      type="checkbox"
-                      checked={returnedItems.includes(item.id)}
-                      onChange={() => toggleEquipment(item.id)}
-                    />
-                    <span>
-                      <strong>{item.item}</strong>
-                      <small>{item.assetTag} · {item.status}</small>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div className="workflow-warning">
-                No assigned equipment was found. You may confirm that there are no outstanding company assets.
-              </div>
-            )}
             <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={assignedEquipment.length > 0 && returnedItems.length !== assignedEquipment.length}
-                onClick={() => complete({ returnedEquipmentIds: returnedItems, itemCount: assignedEquipment.length })}
-              >
-                <Laptop /> Confirm equipment return
-              </button>
+              <button type="button" className="btn-secondary" onClick={onClose}>Close</button>
             </div>
           </div>
         )}
@@ -436,6 +364,8 @@ function OffboardingWorkflow({ context, employee }) {
               const Icon = STEP_ICONS[step.id] || Archive;
               const previousComplete = index === 0 || employee.steps[index - 1].done;
               const locked = !step.done && !previousComplete;
+              const isItOwned = step.id === "revoke-access" || step.id === "collect-equipment";
+              const itWaiting = isItOwned && !step.done && !locked;
 
               return (
                 <article
@@ -448,10 +378,14 @@ function OffboardingWorkflow({ context, employee }) {
                     <div className="workflow-task-title-row">
                       <h4>{step.label}</h4>
                       <span className={`workflow-task-state ${step.done ? "done" : ""}`}>
-                        {step.done ? "Completed" : locked ? "Waiting" : "Ready"}
+                        {step.done ? "Completed" : itWaiting ? "Waiting on IT" : locked ? "Waiting" : "Ready"}
                       </span>
                     </div>
-                    <p>{step.description}</p>
+                    <p>
+                      {itWaiting
+                        ? `${step.description} Owned by IT — this shows up automatically on their dashboard.`
+                        : step.description}
+                    </p>
                     {step.done && step.details && (
                       <small className="workflow-task-record">Completed and saved to this employee's offboarding record.</small>
                     )}
@@ -459,10 +393,18 @@ function OffboardingWorkflow({ context, employee }) {
                   <button
                     type="button"
                     className={step.done ? "btn-secondary" : "btn-primary"}
-                    disabled={locked || step.done}
-                    onClick={() => setActiveStep(step)}
+                    disabled={locked || step.done || itWaiting}
+                    onClick={itWaiting ? undefined : () => setActiveStep(step)}
                   >
-                    {step.done ? <><Check /> Done</> : locked ? "Complete previous task" : <>Start task <ChevronRight /></>}
+                    {step.done ? (
+                      <><Check /> Done</>
+                    ) : itWaiting ? (
+                      "Handled by IT"
+                    ) : locked ? (
+                      "Complete previous task"
+                    ) : (
+                      <>Start task <ChevronRight /></>
+                    )}
                   </button>
                 </article>
               );

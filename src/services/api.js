@@ -64,3 +64,22 @@ export async function safeApi(path, options = {}) {
     return null;
   }
 }
+
+// Fetch the full app state (employees, tasks, equipment, accessRequests,
+// notifications, departments, auditLogs, orientations) from Postgres.
+// Returns null (instead of throwing) if the API is unreachable or the user
+// isn't authenticated yet, so callers can fall back to the localStorage cache.
+export async function fetchAppState() {
+  return safeApi("/app-state");
+}
+
+// Push a partial or full app state to Postgres. Only include the keys you
+// want to overwrite; omitted keys are left untouched server-side. Returns
+// null (never throws) on failure so callers can keep relying on the
+// localStorage cache and retry later.
+export async function syncAppState(partialState) {
+  return safeApi("/app-state", {
+    method: "PUT",
+    body: JSON.stringify(partialState),
+  });
+}

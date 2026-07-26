@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Check, CheckCircle2, Download, FileText, UserPlus, X } from "lucide-react";
 import Sidebar from "./Sidebar.jsx";
 import TopNavbar from "./TopNavbar.jsx";
-import { safeApi } from "../services/api.js";
+import { safeApi, fetchAppState, syncAppState } from "../services/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { AUDIT_DEMO_LOGS } from "../utils/auditDemoData.js";
+import { stepOwnerRole } from "../utils/roles.js";
 
 const INITIAL_EMPLOYEES = [
   { id:"emp-1", name:"Emily Carter", role:"UX Designer", department:"Design", email:"emily.carter@journeyone.com", avatar:"https://i.pravatar.cc/100?img=47", type:"onboarding", startLabel:"Starts Jul 28", startDate:"2026-07-28", progress:60, nextStep:{label:"Assign Laptop",icon:"laptop",due:"Today"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Provision accounts",done:true},{id:"s4",label:"Assign laptop",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
@@ -16,10 +17,10 @@ const INITIAL_EMPLOYEES = [
   { id:"emp-6", name:"Noah Williams", role:"Financial Analyst", department:"Finance", email:"noah.williams@journeyone.com", avatar:"https://i.pravatar.cc/100?img=15", type:"offboarding", startLabel:"Last Day: Aug 8", startDate:"2026-08-08", progress:20, nextStep:{label:"Disable Accounts",icon:"shield",due:"Tomorrow"}, steps:[{id:"notify-teams",label:"Notify IT and manager",done:true},{id:"revoke-access",label:"Disable accounts and revoke access",done:false},{id:"transfer-files",label:"Transfer files and ownership",done:false},{id:"collect-equipment",label:"Collect company equipment",done:false},{id:"archive-employee",label:"Archive employee record",done:false}]}
 ];
 const INITIAL_TASKS=[
-{id:"task-1",employeeId:"emp-1",actionType:"EQUIPMENT_ASSIGNED",label:"Assign laptop for Emily Carter",subLabel:"Onboarding",priority:"High",icon:"laptop",assignedRole:"IT Manager",dueDate:"2026-07-26",status:"OPEN",done:false},
-{id:"task-2",employeeId:"emp-2",actionType:"ACCESS_PROVISIONED",label:"Approve access for Marcus Lee",subLabel:"Onboarding",priority:"Medium",icon:"shield",assignedRole:"IT Manager",dueDate:"2026-07-27",status:"OPEN",done:false},
-{id:"task-3",employeeId:"emp-4",actionType:"EQUIPMENT_COLLECTED",label:"Collect badge from Daniel Brooks",subLabel:"Offboarding",priority:"High",icon:"briefcase",assignedRole:"IT Manager",dueDate:"2026-05-30",status:"OPEN",done:false},
-{id:"task-4",employeeId:"emp-3",actionType:"DOCUMENTS_APPROVED",label:"Review documents for Ava Patel",subLabel:"Onboarding",priority:"Low",icon:"file-text",assignedRole:"HR Manager",dueDate:"2026-07-28",status:"OPEN",done:false}];
+{id:"task-1",employeeId:"emp-1",actionType:"EQUIPMENT_ASSIGNED",label:"Assign laptop for Emily Carter",subLabel:"Onboarding",priority:"High",icon:"laptop",assignedRole:"IT_MANAGER",dueDate:"2026-07-26",status:"OPEN",done:false},
+{id:"task-2",employeeId:"emp-2",actionType:"ACCESS_PROVISIONED",label:"Approve access for Marcus Lee",subLabel:"Onboarding",priority:"Medium",icon:"shield",assignedRole:"IT_MANAGER",dueDate:"2026-07-27",status:"OPEN",done:false},
+{id:"task-3",employeeId:"emp-4",actionType:"EQUIPMENT_COLLECTED",label:"Collect badge from Daniel Brooks",subLabel:"Offboarding",priority:"High",icon:"briefcase",assignedRole:"IT_MANAGER",dueDate:"2026-05-30",status:"OPEN",done:false},
+{id:"task-4",employeeId:"emp-3",actionType:"DOCUMENTS_APPROVED",label:"Review documents for Ava Patel",subLabel:"Onboarding",priority:"Low",icon:"file-text",assignedRole:"HR_MANAGER",dueDate:"2026-07-28",status:"OPEN",done:false}];
 const INITIAL_ACCESS=[
 {id:"acc-1",name:"Marcus Lee",avatar:"https://i.pravatar.cc/100?img=12",system:"GitHub – Engineering Org",requested:"Jul 20, 2026",status:"Pending"},
 {id:"acc-2",name:"Ava Patel",avatar:"https://i.pravatar.cc/100?img=32",system:"Marketing Analytics Suite",requested:"Jul 19, 2026",status:"Pending"},
@@ -411,7 +412,7 @@ export default function Layout() {
     const saved = load("jo-audit", []);
     return saved.length ? saved : AUDIT_DEMO_LOGS;
   });
-  const [systemMode, setSystemMode] = useState("Local demo");
+  const [systemMode, setSystemMode] = useState("Connecting...");
 
   useEffect(() => {
     localStorage.setItem("jo-employees", JSON.stringify(employees));
@@ -435,7 +436,93 @@ export default function Layout() {
     localStorage.setItem("jo-user", JSON.stringify(currentUser));
   }, [currentUser]);
   useEffect(() => { localStorage.setItem("jo-audit", JSON.stringify(auditLogs)); }, [auditLogs]);
-  useEffect(() => { safeApi("/health").then((result) => result && setSystemMode("API connected")); }, []);
+  const [hydratedFromApi, setHydratedFromApi] = useState(false);
+  // Tracks whether *this* tab has an edit that hasn't been pushed (or is
+  // mid-push) yet, so the polling refetch below never clobbers work in
+  // flight with a slightly-stale server snapshot.
+  const lastLocalEditAt = useRef(0);
+  const pushInFlight = useRef(false);
+
+  function applyRemoteState(remote) {
+    if (!remote) return;
+    if (remote.employees) setEmployees(normalizeEmployees(remote.employees));
+    if (remote.tasks) setTasks(remote.tasks);
+    if (remote.equipment) setEquipment(remote.equipment);
+    if (remote.accessRequests) setAccessRequests(remote.accessRequests);
+    if (remote.notifications) setNotifications(remote.notifications);
+    if (remote.departments) setDepartments(remote.departments);
+    if (remote.auditLogs?.length) setAuditLogs(remote.auditLogs);
+  }
+
+  // On load, try to hydrate every collection from Postgres. If the API is
+  // unreachable (offline, DB down, etc.) we simply keep whatever was already
+  // loaded from localStorage above and mark the app as running on the local
+  // cache. Nothing here can crash the app if the request fails.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const remote = await fetchAppState();
+      if (cancelled) return;
+      if (remote) {
+        applyRemoteState(remote);
+        setSystemMode("API connected");
+      } else {
+        setSystemMode("Offline (using local cache)");
+      }
+      setHydratedFromApi(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Push every field back to Postgres a moment after anything changes, so the
+  // full app state (not just what the older per-entity endpoints modeled) is
+  // persisted exactly as-is. This waits until the initial hydration attempt
+  // above has finished, so we never overwrite server data with stale/default
+  // local state before we've had a chance to load the real thing. If the API
+  // call fails, localStorage (written by the effects above) keeps working as
+  // the fallback and we simply retry on the next change.
+  useEffect(() => {
+    if (!hydratedFromApi) return;
+    lastLocalEditAt.current = Date.now();
+    const handle = window.setTimeout(() => {
+      pushInFlight.current = true;
+      syncAppState({
+        employees, tasks, equipment, accessRequests, notifications, departments, auditLogs,
+      }).then((result) => {
+        pushInFlight.current = false;
+        setSystemMode(result ? "API connected" : "Offline (using local cache)");
+      });
+    }, 800);
+    return () => window.clearTimeout(handle);
+  }, [hydratedFromApi, employees, tasks, equipment, accessRequests, notifications, departments, auditLogs]);
+
+  // Cross-session live sync. There's no websocket/SSE backend here, so this
+  // is a short-interval poll: every few seconds, pull the latest snapshot
+  // from Postgres and merge it in. This is what makes, e.g., an IT
+  // dashboard reflect an onboarding an HR manager just started in a
+  // different browser/session without anyone reloading the page. We skip a
+  // poll while a local edit was made in the last few seconds (or is still
+  // being pushed) so we never overwrite a click that hasn't reached the
+  // server yet.
+  useEffect(() => {
+    if (!hydratedFromApi) return;
+    const POLL_MS = 6000;
+    const QUIET_WINDOW_MS = 2500;
+    let cancelled = false;
+    const interval = window.setInterval(async () => {
+      if (pushInFlight.current) return;
+      if (Date.now() - lastLocalEditAt.current < QUIET_WINDOW_MS) return;
+      const remote = await fetchAppState();
+      if (cancelled) return;
+      if (remote) {
+        applyRemoteState(remote);
+        setSystemMode("API connected");
+      } else {
+        setSystemMode("Offline (using local cache)");
+      }
+    }, POLL_MS);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [hydratedFromApi]);
 
   useEffect(() => {
     const migrationKey = "jo-it-demo-journeys-v3";
@@ -486,19 +573,19 @@ export default function Layout() {
       {
         id: "task-blaire-equipment", employeeId: "emp-blaire-willow", actionType: "EQUIPMENT_ASSIGNED",
         label: "Assign MacBook Pro to Blaire Willow", subLabel: "Onboarding", priority: "High",
-        assignedRole: "IT Manager", dueDate: "2026-07-22", status: "OPEN", done: false, icon: "laptop",
+        assignedRole: "IT_MANAGER", dueDate: "2026-07-22", status: "OPEN", done: false, icon: "laptop",
         targetPath: "/equipment?focus=Blaire%20Willow",
       },
       {
         id: "task-elizabeth-account", employeeId: "emp-elizabeth-melody", actionType: "ACCESS_PROVISIONED",
         label: "Create employee account for Elizabeth Melody", subLabel: "Onboarding", priority: "High",
-        assignedRole: "IT Manager", dueDate: "2026-07-22", status: "OPEN", done: false, icon: "key",
+        assignedRole: "IT_MANAGER", dueDate: "2026-07-22", status: "OPEN", done: false, icon: "key",
         targetPath: "/accounts?focus=emp-elizabeth-melody",
       },
       {
         id: "task-carter-access", employeeId: "emp-carter-johnson", actionType: "ACCESS_REQUEST_REVIEW",
         label: "Review Microsoft 365 access for Carter Johnson", subLabel: "Onboarding", priority: "Medium",
-        assignedRole: "IT Manager", dueDate: "2026-07-23", status: "OPEN", done: false, icon: "shield",
+        assignedRole: "IT_MANAGER", dueDate: "2026-07-23", status: "OPEN", done: false, icon: "shield",
         targetPath: "/access-requests?focus=acc-carter-m365",
       },
     ];
@@ -527,9 +614,9 @@ export default function Layout() {
     const migrationKey = "jo-hr-dashboard-tasks-v1";
     if (localStorage.getItem(migrationKey)) return;
     const demoTasks = [
-      { id:"task-hr-welcome-emily", employeeId:"emp-1", actionType:"WELCOME_SENT", label:"Send first-day reminder to Emily Carter", subLabel:"Onboarding", priority:"High", assignedRole:"HR Manager", dueDate:"2026-07-27", status:"OPEN", done:false, route:"/onboarding/emp-1" },
-      { id:"task-hr-orientation-marcus", employeeId:"emp-2", actionType:"ORIENTATION_SCHEDULED", label:"Schedule orientation for Marcus Lee", subLabel:"Onboarding", priority:"Medium", assignedRole:"HR Manager", dueDate:"2026-07-28", status:"OPEN", done:false, route:"/orientation" },
-      { id:"task-hr-documents-ava", employeeId:"emp-3", actionType:"DOCUMENTS_APPROVED", label:"Review signed documents for Ava Patel", subLabel:"Onboarding", priority:"High", assignedRole:"HR Manager", dueDate:"2026-07-26", status:"OPEN", done:false, route:"/documents" },
+      { id:"task-hr-welcome-emily", employeeId:"emp-1", actionType:"WELCOME_SENT", label:"Send first-day reminder to Emily Carter", subLabel:"Onboarding", priority:"High", assignedRole:"HR_MANAGER", dueDate:"2026-07-27", status:"OPEN", done:false, route:"/onboarding/emp-1" },
+      { id:"task-hr-orientation-marcus", employeeId:"emp-2", actionType:"ORIENTATION_SCHEDULED", label:"Schedule orientation for Marcus Lee", subLabel:"Onboarding", priority:"Medium", assignedRole:"HR_MANAGER", dueDate:"2026-07-28", status:"OPEN", done:false, route:"/orientation" },
+      { id:"task-hr-documents-ava", employeeId:"emp-3", actionType:"DOCUMENTS_APPROVED", label:"Review signed documents for Ava Patel", subLabel:"Onboarding", priority:"High", assignedRole:"HR_MANAGER", dueDate:"2026-07-26", status:"OPEN", done:false, route:"/documents" },
     ];
     setTasks((previous) => {
       const ids = new Set(previous.map((task) => task.id));
@@ -568,7 +655,7 @@ export default function Layout() {
       "revoke-access":"ACCESS_REVOKED", "transfer-files":"FILES_TRANSFERRED", "collect-equipment":"EQUIPMENT_COLLECTED",
       "archive-employee":"EMPLOYEE_ARCHIVED"
     };
-    const ownerByAction = { WELCOME_SENT:"HR Manager", DOCUMENTS_APPROVED:"HR Manager", ACCESS_PROVISIONED:"IT Manager", EQUIPMENT_ASSIGNED:"IT Manager", ORIENTATION_SCHEDULED:"HR Manager", TEAMS_NOTIFIED:"HR Manager", ACCESS_REVOKED:"IT Manager", FILES_TRANSFERRED:"HR Manager", EQUIPMENT_COLLECTED:"IT Manager", EXIT_INTERVIEW_COMPLETED:"HR Manager", EMPLOYEE_ARCHIVED:"HR Manager" };
+    const ownerByAction = { WELCOME_SENT:"HR_MANAGER", DOCUMENTS_APPROVED:"HR_MANAGER", ACCESS_PROVISIONED:"IT_MANAGER", EQUIPMENT_ASSIGNED:"IT_MANAGER", ORIENTATION_SCHEDULED:"HR_MANAGER", TEAMS_NOTIFIED:"HR_MANAGER", ACCESS_REVOKED:"IT_MANAGER", FILES_TRANSFERRED:"HR_MANAGER", EQUIPMENT_COLLECTED:"IT_MANAGER", EXIT_INTERVIEW_COMPLETED:"HR_MANAGER", EMPLOYEE_ARCHIVED:"HR_MANAGER" };
     const newTasks = employee.steps.map((step, index) => ({
       id:`task-${Date.now()}-${index}`, employeeId:employee.id, actionType:actionByStep[step.id],
       label:`${step.label} for ${employee.name}`, subLabel:employee.type === "onboarding" ? "Onboarding" : "Offboarding",
@@ -619,6 +706,10 @@ export default function Layout() {
   }
 
   function completeOnboardingStep(employeeId, stepId, details = {}) {
+    if (authenticatedUser?.role && authenticatedUser.role !== stepOwnerRole(stepId)) {
+      flash(`Only ${stepOwnerRole(stepId).replace("_", " ").toLowerCase()} can complete this step.`);
+      return;
+    }
     let completedLabel = "Task completed";
 
     setEmployees((previous) =>
@@ -667,23 +758,10 @@ export default function Layout() {
       );
     }
 
-    if (stepId === "provision-access" && details.systems?.length) {
-      setAccessRequests((previous) => [
-        ...details.systems.map((system, index) => ({
-          id: `acc-${Date.now()}-${index}`,
-          name: details.employeeName,
-          avatar: details.employeeAvatar,
-          system,
-          requested: new Date().toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
-          status: "Approved",
-        })),
-        ...previous,
-      ]);
-    }
+    // Note: "provision-access" is intentionally not handled here. Access
+    // requests are created (as Pending) by requestAccess() when HR specifies
+    // which systems a new hire needs, and this function only runs for that
+    // step once IT has resolved every pending request via decideAccess().
 
     const onboardingAction = {"send-welcome":"WELCOME_SENT","collect-documents":"DOCUMENTS_APPROVED","provision-access":"ACCESS_PROVISIONED","assign-equipment":"EQUIPMENT_ASSIGNED","schedule-orientation":"ORIENTATION_SCHEDULED"}[stepId];
     if (onboardingAction) completeTaskFor(employeeId, onboardingAction);
@@ -704,6 +782,10 @@ export default function Layout() {
   }
 
   function completeOffboardingStep(employeeId, stepId, details = {}) {
+    if (authenticatedUser?.role && authenticatedUser.role !== stepOwnerRole(stepId)) {
+      flash(`Only ${stepOwnerRole(stepId).replace("_", " ").toLowerCase()} can complete this step.`);
+      return;
+    }
     let completedLabel = "Task completed";
     let employeeName = details.employeeName || "employee";
 
@@ -863,6 +945,14 @@ export default function Layout() {
 
     setEmployees((previous) => [employee, ...previous]);
     createTasksForJourney(employee);
+    if (type === "offboarding" && existingEmployee) {
+      setEquipment((previous) => previous.map((item) =>
+        item.status === "Assigned" &&
+        (item.employeeId === existingEmployee.id || item.assignedTo === existingEmployee.name)
+          ? { ...item, status: "To Be Collected", employeeId: employee.id, assignedTo: employee.name }
+          : item
+      ));
+    }
     recordAudit(type === "onboarding" ? "ONBOARDING_INITIATED" : "OFFBOARDING_INITIATED", "employee", employee.id, {
       type,
       employeeName: employee.name,
@@ -895,7 +985,7 @@ export default function Layout() {
       label,
       subLabel: employee ? `${employee.name} · Custom HR task` : "Custom HR task",
       priority,
-      assignedRole: "HR Manager",
+      assignedRole: "HR_MANAGER",
       dueDate: dueDate || new Date().toISOString().slice(0, 10),
       status: "OPEN",
       done: false,
@@ -958,6 +1048,10 @@ export default function Layout() {
     manualToggleTask: (id) => {
       const task = tasks.find((item) => item.id === id);
       if (!task) return;
+      if (task.assignedRole && task.assignedRole !== authenticatedUser?.role) {
+        flash(`This task belongs to ${task.assignedRole.replace("_", " ").toLowerCase()}'s workspace.`);
+        return;
+      }
       const nextDone = !(task.done || task.status === "COMPLETED");
       setTasks((previous) => previous.map((item) => item.id === id ? {
         ...item,
@@ -972,28 +1066,120 @@ export default function Layout() {
       safeApi(`/tasks/${id}`, { method:"PATCH", body:JSON.stringify({ status: nextDone ? "COMPLETED" : "OPEN" }) });
       flash(nextDone ? "Task marked complete." : "Task reopened.");
     },
+    // HR specifies which systems a new hire needs. This only opens a Pending
+    // request for IT to review in Access Requests — it does not grant
+    // anything and does not complete the "provision-access" step. That step
+    // only completes once IT has resolved every request in this batch
+    // (see decideAccess below), which is what keeps the IT dashboard as the
+    // real source of truth for what's actually been granted.
+    requestAccess: (employeeId, systems) => {
+      const employee = employees.find((item) => item.id === employeeId);
+      if (!employee || !systems?.length) {
+        flash("Choose at least one system to request.");
+        return;
+      }
+      const requestedAt = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      const newRequests = systems.map((system, index) => ({
+        id: `acc-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+        employeeId: employee.id,
+        name: employee.name,
+        avatar: employee.avatar,
+        system,
+        requested: requestedAt,
+        status: "Pending",
+        stage: "provision",
+      }));
+      setAccessRequests((previous) => [...newRequests, ...previous]);
+      setNotifications((previous) => [
+        { id: `n-${Date.now()}`, text: `${employee.name} needs access to ${systems.join(", ")} — sent to IT for approval.`, time: "Just now", read: false },
+        ...previous,
+      ]);
+      recordAudit("ACCESS_REQUESTED", "employee", employee.id, { systems });
+      flash(`Access requested for ${employee.name}. IT will review it in Access Requests.`);
+    },
     decideAccess: (id, status, reason = "") => {
       const request = accessRequests.find((item) => item.id === id);
-      setAccessRequests((previous) => previous.map((item) => item.id === id ? { ...item, status, reason, decidedAt:new Date().toISOString(), decidedBy:currentUser.name } : item));
-      if (status === "Approved" && request) {
-        const employee = employees.find((item) => item.name === request.name);
-        if (employee) {
-          completeTaskFor(employee.id, "ACCESS_PROVISIONED");
-          completeTaskFor(employee.id, "ACCESS_REQUEST_REVIEW");
+      if (!request) return;
+      const decidedAt = new Date().toISOString();
+      const updatedRequests = accessRequests.map((item) =>
+        item.id === id ? { ...item, status, reason, decidedAt, decidedBy: currentUser.name } : item
+      );
+      setAccessRequests(updatedRequests);
+
+      const employee = request.employeeId
+        ? employees.find((item) => item.id === request.employeeId)
+        : employees.find((item) => item.name === request.name);
+
+      if (employee && request.stage === "provision") {
+        const batch = updatedRequests.filter((item) => item.employeeId === employee.id && item.stage === "provision");
+        const stillPending = batch.some((item) => item.status === "Pending");
+        if (!stillPending) {
+          const approvedSystems = batch.filter((item) => item.status === "Approved").map((item) => item.system);
+          if (approvedSystems.length) {
+            completeOnboardingStep(employee.id, "provision-access", {
+              employeeName: employee.name,
+              employeeAvatar: employee.avatar,
+              systems: approvedSystems,
+            });
+          } else {
+            setNotifications((previous) => [
+              { id: `n-${Date.now()}`, text: `IT denied all requested access for ${employee.name}. HR needs to submit a new request.`, time: "Just now", read: false },
+              ...previous,
+            ]);
+          }
         }
+      } else if (employee && status === "Approved") {
+        // Ad-hoc access request not tied to an onboarding provisioning batch.
+        completeTaskFor(employee.id, "ACCESS_PROVISIONED");
       }
-      recordAudit("ACCESS_REQUEST_DECIDED", "accessRequest", id, { status, reason });
+
+      recordAudit("ACCESS_REQUEST_DECIDED", "accessRequest", id, { status, reason, employeeId: employee?.id });
       safeApi(`/access-requests/${id}`, { method:"PATCH", body:JSON.stringify({ status, reason }) });
       flash(`Access request ${status.toLowerCase()}.`);
     },
     markEquipment: (id, status = "Assigned") => {
       const item = equipment.find((entry) => entry.id === id);
-      setEquipment((previous) => previous.map((entry) => entry.id === id ? { ...entry, status, handledAt:new Date().toISOString() } : entry));
-      const employee = employees.find((entry) => entry.name === item?.assignedTo);
-      if (employee) completeTaskFor(employee.id, status === "Available" ? "EQUIPMENT_COLLECTED" : "EQUIPMENT_ASSIGNED");
-      recordAudit("EQUIPMENT_STATUS_UPDATED", "equipment", id, { status, employeeId:employee?.id });
-      if (item && employee) safeApi(`/equipment/${id}/${status === "Available" ? "return" : "assign"}`, { method:"POST", body:JSON.stringify({ employeeId:employee.id, employeeName:employee.name }) });
-      flash("Equipment status updated and related task completed.");
+      if (!item) return;
+      const employee = employees.find((entry) => entry.id === item.employeeId) || employees.find((entry) => entry.name === item.assignedTo);
+      const updatedEquipment = equipment.map((entry) => entry.id === id ? {
+        ...entry,
+        status,
+        handledAt: new Date().toISOString(),
+        ...(status === "Available" ? { assignedTo: "Unassigned", employeeId: null } : {}),
+      } : entry);
+      setEquipment(updatedEquipment);
+
+      let message = "Equipment status updated.";
+      if (employee) {
+        if (status === "Available") {
+          const stillAssigned = updatedEquipment.some(
+            (entry) => entry.id !== id && (entry.employeeId === employee.id || entry.assignedTo === employee.name)
+          );
+          if (employee.type === "offboarding" && !stillAssigned) {
+            completeOffboardingStep(employee.id, "collect-equipment", {
+              employeeName: employee.name,
+              employeeAvatar: employee.avatar,
+              returnedItem: item.item,
+            });
+            message = `${item.item} returned. Offboarding equipment step complete.`;
+          } else {
+            // Don't mark the IT task complete yet — for offboarding employees
+            // with multiple assigned items, there's still equipment outstanding
+            // (stillAssigned is true), so the task must stay open until the
+            // last item is returned and completeOffboardingStep runs above.
+            message = employee.type === "offboarding"
+              ? `${item.item} returned. Waiting on the rest of ${employee.name}'s equipment.`
+              : `${item.item} marked returned.`;
+          }
+        } else {
+          completeTaskFor(employee.id, "EQUIPMENT_ASSIGNED");
+          message = `${item.item} assigned to ${employee.name}.`;
+        }
+      }
+
+      recordAudit("EQUIPMENT_STATUS_UPDATED", "equipment", id, { status, employeeId: employee?.id });
+      if (employee) safeApi(`/equipment/${id}/${status === "Available" ? "return" : "assign"}`, { method:"POST", body:JSON.stringify({ employeeId:employee.id, employeeName:employee.name }) });
+      flash(message);
     },
     assignEquipment: (equipmentId, employeeId) => {
       const item = equipment.find((entry) => entry.id === equipmentId);
@@ -1042,16 +1228,33 @@ export default function Layout() {
     },
     toggleAccountStatus: (employeeId) => {
       let nextStatus = "Active";
-      let employeeName = "employee";
+      let employeeRef = null;
       setEmployees((previous) => previous.map((employee) => {
         if (employee.id !== employeeId) return employee;
         nextStatus = (employee.accountStatus || "Active") === "Active" ? "Disabled" : "Active";
-        employeeName = employee.name;
+        employeeRef = employee;
         return { ...employee, accountStatus: nextStatus };
       }));
+
+      if (employeeRef && nextStatus === "Disabled") {
+        setAccessRequests((previous) => previous.map((request) =>
+          (request.employeeId === employeeId || request.name === employeeRef.name) && request.status === "Approved"
+            ? { ...request, status: "Revoked", decidedAt: new Date().toISOString(), decidedBy: currentUser.name }
+            : request
+        ));
+        if (employeeRef.type === "offboarding") {
+          completeOffboardingStep(employeeId, "revoke-access", {
+            employeeName: employeeRef.name,
+            employeeAvatar: employeeRef.avatar,
+          });
+        } else {
+          completeTaskFor(employeeId, "ACCESS_REVOKED");
+        }
+      }
+
       recordAudit("ACCOUNT_STATUS_CHANGED", "employee", employeeId, { status: nextStatus });
       safeApi(`/employees/${employeeId}/account`, { method: "PATCH", body: JSON.stringify({ accountStatus: nextStatus }) });
-      flash(`${employeeName}'s account is now ${nextStatus.toLowerCase()}.`);
+      flash(`${employeeRef?.name || "Employee"}'s account is now ${nextStatus.toLowerCase()}.`);
     },
     resetAccountPassword: (employeeId) => {
       const employee = employees.find((item) => item.id === employeeId);

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { getTaskRoute } from "../utils/taskRouting.js";
 import { getAuditLogs } from "../utils/auditDemoData.js";
+import { roleLabel } from "../utils/roles.js";
 
 const roleCopy = {
   IT_MANAGER: {
@@ -64,7 +65,7 @@ function TaskList({ tasks, empty = "No tasks need your attention.", onOpen }) {
     return (
       <Row className={`role-list-row ${onOpen ? "role-list-button" : ""}`} key={task.id} onClick={onOpen ? () => onOpen(task) : undefined}>
         <div className="role-list-icon"><ClipboardCheck /></div>
-        <div className="role-list-body"><strong>{task.label}</strong><span>{task.assignedRole || task.subLabel}</span></div>
+        <div className="role-list-body"><strong>{task.label}</strong><span>{roleLabel(task.assignedRole) || task.subLabel}</span></div>
         <span className={`priority-badge ${task.priority || "Medium"}`}>{task.status === "COMPLETED" || task.done ? "Complete" : task.priority || "Open"}</span>
         {onOpen && <span className="qa-arrow maroon task-row-arrow"><ArrowRight /></span>}
       </Row>
@@ -85,7 +86,7 @@ function JourneyList({ employees, onOpen, type }) {
 }
 
 function ITDashboard({ c }) {
-  const openItTasks = c.tasks.filter((task) => /IT Manager/i.test(task.assignedRole || "") && !task.done && task.status !== "COMPLETED");
+  const openItTasks = c.tasks.filter((task) => task.assignedRole === "IT_MANAGER" && !task.done && task.status !== "COMPLETED");
   const pendingAccess = c.accessRequests.filter((request) => request.status === "Pending");
   const availableEquipment = c.equipment.filter((item) => item.status === "Available");
   const accountTasks = openItTasks.filter((task) => ["ACCESS_PROVISIONED", "ACCESS_REVOKED"].includes(task.actionType));
@@ -296,7 +297,7 @@ function ITDashboard({ c }) {
 }
 
 function HRDashboard({ c }) {
-  const hrTasks = c.tasks.filter((task) => /HR Manager/i.test(task.assignedRole || ""));
+  const hrTasks = c.tasks.filter((task) => task.assignedRole === "HR_MANAGER");
   const activeHrTasks = hrTasks.filter((task) => !task.done && task.status !== "COMPLETED");
   const activeEmployees = c.employees
     .filter((employee) => employee.progress < 100)
