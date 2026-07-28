@@ -79,6 +79,12 @@ export default function EquipmentInventory() {
     `${eq.item} ${eq.assetTag} ${eq.assignedTo} ${eq.status}`.toLowerCase().includes(query.toLowerCase())
   );
 
+  const focusEmployee = focusName ? c.employees.find((employee) => employee.name === focusName) : null;
+  const focusHasEquipment = focusName ? c.equipment.some((eq) => eq.assignedTo === focusName) : true;
+  const collectEquipmentStep = focusEmployee?.steps?.find((step) => step.id === "collect-equipment");
+  const canCloseOutCollectStep =
+    focusEmployee?.type === "offboarding" && collectEquipmentStep && !collectEquipmentStep.done;
+
   return (
     <div>
       <div className="page-header">
@@ -88,6 +94,29 @@ export default function EquipmentInventory() {
         </div>
         <button className="btn-primary" onClick={() => setShow(!show)}><Plus />Add equipment</button>
       </div>
+      {focusName && !focusHasEquipment && (
+        <div className="card empty-state" role="status">
+          No equipment is currently assigned to <strong>{focusName}</strong>
+          {focusEmployee?.type === "offboarding" ? " — there's nothing outstanding to collect." : "."}
+          {canCloseOutCollectStep && (
+            <div className="modal-actions" style={{ marginTop: "0.75rem" }}>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() =>
+                  c.completeOffboardingStep(focusEmployee.id, "collect-equipment", {
+                    employeeName: focusEmployee.name,
+                    employeeAvatar: focusEmployee.avatar,
+                    returnedItem: "No equipment outstanding",
+                  })
+                }
+              >
+                <Check /> Confirm nothing outstanding
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {show && (
         <form
           className="card inline-form"
@@ -120,6 +149,9 @@ export default function EquipmentInventory() {
           <tbody>
             {filteredEquipment.map((eq) => {
               const canAssign = eq.status === "Available" || eq.status === "Pending Assignment" || eq.assignedTo === "Unassigned";
+              const assignedEmployee = c.employees.find((employee) => employee.id === eq.employeeId || employee.name === eq.assignedTo);
+              const isOwedByOffboardingEmployee = eq.status === "Assigned" && assignedEmployee?.type === "offboarding";
+              const canMarkReturned = eq.status === "To Be Collected" || isOwedByOffboardingEmployee;
               return (
                 <tr key={eq.id} ref={(node) => (rowRefs.current[eq.id] = node)} className={focusName === eq.assignedTo ? "row-highlight" : ""}>
                   <td><strong>{eq.item}</strong></td>
@@ -128,7 +160,7 @@ export default function EquipmentInventory() {
                   <td><span className={`status-chip ${eq.status.replace(/\s+/g, "")}`}>{eq.status}</span></td>
                   <td className="equipment-action-cell">
                     {canAssign && <button className="btn-secondary assign-equipment-btn" onClick={() => setAssigningEquipment(eq)}><UserRound />Assign to person</button>}
-                    {eq.status === "To Be Collected" && <button className="btn-secondary" onClick={() => c.markEquipment(eq.id, "Available")}>Mark returned</button>}
+                    {canMarkReturned && <button className="btn-secondary" onClick={() => c.markEquipment(eq.id, "Available")}>Mark returned</button>}
                   </td>
                 </tr>
               );

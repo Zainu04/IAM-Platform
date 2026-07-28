@@ -5,40 +5,14 @@ import Sidebar from "./Sidebar.jsx";
 import TopNavbar from "./TopNavbar.jsx";
 import { safeApi, fetchAppState, syncAppState } from "../services/api.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { AUDIT_DEMO_LOGS } from "../utils/auditDemoData.js";
 import { stepOwnerRole } from "../utils/roles.js";
 
-const INITIAL_EMPLOYEES = [
-  { id:"emp-1", name:"Emily Carter", role:"UX Designer", department:"Design", email:"emily.carter@journeyone.com", avatar:"https://i.pravatar.cc/100?img=47", type:"onboarding", startLabel:"Starts Jul 28", startDate:"2026-07-28", progress:60, nextStep:{label:"Assign Laptop",icon:"laptop",due:"Today"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Provision accounts",done:true},{id:"s4",label:"Assign laptop",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
-  { id:"emp-2", name:"Marcus Lee", role:"Software Engineer", department:"Engineering", email:"marcus.lee@journeyone.com", avatar:"https://i.pravatar.cc/100?img=12", type:"onboarding", startLabel:"Starts Jul 29", startDate:"2026-07-29", progress:40, nextStep:{label:"Approve Access",icon:"shield",due:"Tomorrow"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Collect signed documents",done:true},{id:"s3",label:"Approve system access",done:false},{id:"s4",label:"Assign equipment",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
-  { id:"emp-3", name:"Ava Patel", role:"Marketing Associate", department:"Marketing", email:"ava.patel@journeyone.com", avatar:"https://i.pravatar.cc/100?img=32", type:"onboarding", startLabel:"Starts Aug 2", startDate:"2026-08-02", progress:20, nextStep:{label:"Upload Documents",icon:"file",due:"2 days"}, steps:[{id:"s1",label:"Send offer & welcome email",done:true},{id:"s2",label:"Upload signed documents",done:false},{id:"s3",label:"Approve system access",done:false},{id:"s4",label:"Assign equipment",done:false},{id:"s5",label:"Schedule first-day orientation",done:false}]},
-  { id:"emp-4", name:"Daniel Brooks", role:"IT Support Specialist", department:"Information Technology", email:"daniel.brooks@journeyone.com", avatar:"https://i.pravatar.cc/100?img=51", type:"offboarding", startLabel:"Last Day: May 30", startDate:"2026-05-30", progress:80, nextStep:{label:"Collect Equipment",icon:"mail",due:"Today"}, steps:[{id:"notify-teams",label:"Notify IT and manager",done:true},{id:"revoke-access",label:"Disable accounts and revoke access",done:true},{id:"transfer-files",label:"Transfer files and ownership",done:true},{id:"collect-equipment",label:"Collect company equipment",done:false},{id:"archive-employee",label:"Archive employee record",done:false}]},
-  { id:"emp-5", name:"Sofia Ramirez", role:"HR Coordinator", department:"Human Resources", email:"sofia.ramirez@journeyone.com", avatar:"https://i.pravatar.cc/100?img=44", type:"onboarding", startLabel:"Starts Aug 4", startDate:"2026-08-04", progress:20, nextStep:{label:"Collect Documents",icon:"file",due:"3 days"}, steps:[{id:"send-welcome",label:"Send offer & welcome letter",done:true},{id:"collect-documents",label:"Collect signed documents",done:false},{id:"provision-access",label:"Provision accounts and access",done:false},{id:"assign-equipment",label:"Assign laptop and equipment",done:false},{id:"schedule-orientation",label:"Schedule first-day orientation",done:false}]},
-  { id:"emp-6", name:"Noah Williams", role:"Financial Analyst", department:"Finance", email:"noah.williams@journeyone.com", avatar:"https://i.pravatar.cc/100?img=15", type:"offboarding", startLabel:"Last Day: Aug 8", startDate:"2026-08-08", progress:20, nextStep:{label:"Disable Accounts",icon:"shield",due:"Tomorrow"}, steps:[{id:"notify-teams",label:"Notify IT and manager",done:true},{id:"revoke-access",label:"Disable accounts and revoke access",done:false},{id:"transfer-files",label:"Transfer files and ownership",done:false},{id:"collect-equipment",label:"Collect company equipment",done:false},{id:"archive-employee",label:"Archive employee record",done:false}]}
-];
-const INITIAL_TASKS=[
-{id:"task-1",employeeId:"emp-1",actionType:"EQUIPMENT_ASSIGNED",label:"Assign laptop for Emily Carter",subLabel:"Onboarding",priority:"High",icon:"laptop",assignedRole:"IT_MANAGER",dueDate:"2026-07-26",status:"OPEN",done:false},
-{id:"task-2",employeeId:"emp-2",actionType:"ACCESS_PROVISIONED",label:"Approve access for Marcus Lee",subLabel:"Onboarding",priority:"Medium",icon:"shield",assignedRole:"IT_MANAGER",dueDate:"2026-07-27",status:"OPEN",done:false},
-{id:"task-3",employeeId:"emp-4",actionType:"EQUIPMENT_COLLECTED",label:"Collect badge from Daniel Brooks",subLabel:"Offboarding",priority:"High",icon:"briefcase",assignedRole:"IT_MANAGER",dueDate:"2026-05-30",status:"OPEN",done:false},
-{id:"task-4",employeeId:"emp-3",actionType:"DOCUMENTS_APPROVED",label:"Review documents for Ava Patel",subLabel:"Onboarding",priority:"Low",icon:"file-text",assignedRole:"HR_MANAGER",dueDate:"2026-07-28",status:"OPEN",done:false}];
-const INITIAL_ACCESS=[
-{id:"acc-1",name:"Marcus Lee",avatar:"https://i.pravatar.cc/100?img=12",system:"GitHub – Engineering Org",requested:"Jul 20, 2026",status:"Pending"},
-{id:"acc-2",name:"Ava Patel",avatar:"https://i.pravatar.cc/100?img=32",system:"Marketing Analytics Suite",requested:"Jul 19, 2026",status:"Pending"},
-{id:"acc-3",name:"Emily Carter",avatar:"https://i.pravatar.cc/100?img=47",system:"Figma – Design Team",requested:"Jul 18, 2026",status:"Approved"}];
-const INITIAL_DATES=[
-{id:"date-1",month:"JUL",day:"28",title:"Emily Carter — First Day",subtitle:"UX Designer",badge:"In 2 days"},
-{id:"date-2",month:"JUL",day:"29",title:"Marcus Lee — First Day",subtitle:"Software Engineer",badge:"In 3 days"},
-{id:"date-3",month:"AUG",day:"02",title:"Ava Patel — First Day",subtitle:"Marketing Associate",badge:"In 7 days"},
-{id:"date-4",month:"MAY",day:"30",title:"Daniel Brooks — Last Day",subtitle:"IT Support Specialist",badge:"Today"}];
-const INITIAL_EQUIPMENT=[
-{id:"eq-1",item:'MacBook Pro 14"',assetTag:"JO-1042",assignedTo:"Emily Carter",status:"Pending Assignment"},
-{id:"eq-2",item:"Dell XPS 15",assetTag:"JO-1088",assignedTo:"Marcus Lee",status:"Assigned"},
-{id:"eq-3",item:"iPhone 15",assetTag:"JO-2026",assignedTo:"Ava Patel",status:"Pending Assignment"},
-{id:"eq-4",item:"Badge #4471",assetTag:"BADGE-4471",assignedTo:"Daniel Brooks",status:"To Be Collected"}];
-const INITIAL_NOTIFICATIONS=[
-{id:"n1",text:"Marcus Lee requested access to GitHub",time:"10m ago",read:false},
-{id:"n2",text:"Emily Carter's documents were approved",time:"1h ago",read:false},
-{id:"n3",text:"Daniel Brooks's offboarding starts today",time:"3h ago",read:false}];
+const INITIAL_EMPLOYEES = [];
+const INITIAL_TASKS=[];
+const INITIAL_ACCESS=[];
+const INITIAL_DATES=[];
+const INITIAL_EQUIPMENT=[];
+const INITIAL_NOTIFICATIONS=[];
 const INITIAL_DEPARTMENTS=[
 {id:"dep-1",name:"Engineering",systems:["GitHub","Jira","AWS","Slack"],color:"#7a1130"},
 {id:"dep-2",name:"Design",systems:["Figma","Adobe Creative Cloud","Slack"],color:"#c9922f"},
@@ -53,6 +27,16 @@ function normalizedIdentity(value = "") {
 
 function stableAvatar(profileId) {
   return `https://i.pravatar.cc/100?u=${encodeURIComponent(profileId)}`;
+}
+
+// Every mutation in this file stamps the item it touches with `updatedAt`.
+// This is what lets mergeCollection() (below) resolve conflicts by "who
+// wrote more recently" instead of relying on a snapshot-equality baseline,
+// which was the root cause of completed steps reverting: the baseline was
+// marked "confirmed" the instant a write *succeeded*, even though a
+// `fetchAppState()` immediately after could still return a stale read.
+function withTimestamp(item) {
+  return { ...item, updatedAt: Date.now() };
 }
 
 function normalizeEmployees(employees) {
@@ -374,6 +358,44 @@ function ScheduleOrientationModal({ onClose, employees, onSubmit, presetEmployee
 function ReportModal({onClose,employees,tasks,accessRequests}){const [type,setType]=useState("onboarding");function dl(){let rows=[],name="report.csv";if(type==="onboarding"){rows=employees.filter(e=>e.type==="onboarding").map(e=>({Name:e.name,Role:e.role,Start:e.startLabel,Progress:`${e.progress}%`}));name="onboarding-report.csv"}else if(type==="offboarding"){rows=employees.filter(e=>e.type==="offboarding").map(e=>({Name:e.name,Role:e.role,LastDay:e.startLabel,Progress:`${e.progress}%`}));name="offboarding-report.csv"}else if(type==="tasks"){rows=tasks.map(t=>({Task:t.label,Category:t.subLabel,Priority:t.priority,Status:t.done?"Done":"Open"}));name="tasks-report.csv"}else{rows=accessRequests.map(a=>({Name:a.name,System:a.system,Requested:a.requested,Status:a.status}));name="access-requests-report.csv"}const headers=rows.length?Object.keys(rows[0]):[];const csv=[headers.join(","),...rows.map(r=>headers.map(h=>`"${String(r[h]).replace(/"/g,'""')}"`).join(","))].join("\n");const blob=new Blob([csv],{type:"text/csv"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);onClose(name)}return <Modal title="Generate Report" subtitle="Choose a report to create and download as CSV." onClose={()=>onClose()}><div className="field"><label>Report type</label><select value={type} onChange={e=>setType(e.target.value)}><option value="onboarding">Onboarding summary</option><option value="offboarding">Offboarding summary</option><option value="tasks">Task list</option><option value="access">Access requests</option></select></div><div className="modal-actions"><button className="btn-secondary" onClick={()=>onClose()}>Cancel</button><button className="btn-primary" onClick={dl}><Download/>Download CSV</button></div></Modal>}
 function HowModal({onClose}){return <Modal title="How JourneyOne works" subtitle="A simple workflow behind every hire and every exit." onClose={onClose} width={480}><div className="step-checklist">{["Start a journey","Coordinate access and equipment","Track every required step","Export reports for stakeholders"].map((x,i)=><div className="step-item" key={x}><span className="dot done-dot">{i+1}</span><div><strong>{x}</strong></div></div>)}</div><div className="modal-actions"><button className="btn-primary full" onClick={onClose}>Got it</button></div></Modal>}
 
+const SYNCED_COLLECTIONS = ["employees", "tasks", "equipment", "accessRequests", "notifications", "departments", "auditLogs"];
+
+// Merge two versions of the same collection (by item id):
+//  - local:  what this tab currently has in React state
+//  - remote: what the server has right now (fetched just before pushing)
+//
+// Conflicts are resolved purely by `updatedAt`: whichever side wrote more
+// recently wins. Every mutation in this file stamps the item it changes
+// with `updatedAt` (see withTimestamp() above), so this works without ever
+// needing a separate "baseline" snapshot to infer whether something changed
+// locally.
+//
+// This replaces the old three-way (baseline/local/remote) merge, which had
+// a subtle bug: the baseline was advanced to "confirmed" as soon as a write
+// *succeeded*, but a `fetchAppState()` read immediately afterward could
+// still return a stale snapshot (replica lag, a cache, or simply two
+// separate write paths - the granular step PATCH and the bulk
+// syncAppState() - landing at slightly different times). Once baseline
+// matched the local (completed) item, the merge assumed "nothing changed
+// locally, trust the server" and silently reverted the completed step back
+// to incomplete. Comparing timestamps instead of snapshots removes that
+// failure mode entirely: a stale remote read will always carry an older
+// `updatedAt` than the local edit, so it can never win.
+function mergeCollection(local, remote) {
+  const remoteMap = new Map((remote || []).map((item) => [item.id, item]));
+  const seen = new Set();
+  const merged = (local || []).map((item) => {
+    seen.add(item.id);
+    const remoteItem = remoteMap.get(item.id);
+    if (!remoteItem) return item;
+    const localTime = item.updatedAt || 0;
+    const remoteTime = remoteItem.updatedAt || 0;
+    return remoteTime > localTime ? remoteItem : item;
+  });
+  const remoteOnly = (remote || []).filter((item) => !seen.has(item.id));
+  return [...remoteOnly, ...merged];
+}
+
 export default function Layout() {
   const navigate = useNavigate();
   const { user: authenticatedUser, logout } = useAuth();
@@ -408,10 +430,7 @@ export default function Layout() {
   });
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
-  const [auditLogs, setAuditLogs] = useState(() => {
-    const saved = load("jo-audit", []);
-    return saved.length ? saved : AUDIT_DEMO_LOGS;
-  });
+  const [auditLogs, setAuditLogs] = useState(() => load("jo-audit", []));
   const [systemMode, setSystemMode] = useState("Connecting...");
 
   useEffect(() => {
@@ -445,13 +464,36 @@ export default function Layout() {
 
   function applyRemoteState(remote) {
     if (!remote) return;
-    if (remote.employees) setEmployees(normalizeEmployees(remote.employees));
-    if (remote.tasks) setTasks(remote.tasks);
-    if (remote.equipment) setEquipment(remote.equipment);
-    if (remote.accessRequests) setAccessRequests(remote.accessRequests);
-    if (remote.notifications) setNotifications(remote.notifications);
-    if (remote.departments) setDepartments(remote.departments);
-    if (remote.auditLogs?.length) setAuditLogs(remote.auditLogs);
+
+    if (remote.employees) {
+      setEmployees((local) =>
+        normalizeEmployees(mergeCollection(local, remote.employees))
+      );
+    }
+
+    if (remote.tasks) {
+      setTasks((local) => mergeCollection(local, remote.tasks));
+    }
+
+    if (remote.equipment) {
+      setEquipment((local) => mergeCollection(local, remote.equipment));
+    }
+
+    if (remote.accessRequests) {
+      setAccessRequests((local) => mergeCollection(local, remote.accessRequests));
+    }
+
+    if (remote.notifications) {
+      setNotifications((local) => mergeCollection(local, remote.notifications));
+    }
+
+    if (remote.departments) {
+      setDepartments((local) => mergeCollection(local, remote.departments));
+    }
+
+    if (remote.auditLogs) {
+      setAuditLogs((local) => mergeCollection(local, remote.auditLogs));
+    }
   }
 
   // On load, try to hydrate every collection from Postgres. If the API is
@@ -484,14 +526,32 @@ export default function Layout() {
   useEffect(() => {
     if (!hydratedFromApi) return;
     lastLocalEditAt.current = Date.now();
-    const handle = window.setTimeout(() => {
+    const local = { employees, tasks, equipment, accessRequests, notifications, departments, auditLogs };
+    const handle = window.setTimeout(async () => {
       pushInFlight.current = true;
-      syncAppState({
-        employees, tasks, equipment, accessRequests, notifications, departments, auditLogs,
-      }).then((result) => {
-        pushInFlight.current = false;
-        setSystemMode(result ? "API connected" : "Offline (using local cache)");
-      });
+      // Pull the freshest server snapshot right before pushing, then merge
+      // it with our local edits by updatedAt (see mergeCollection). Without
+      // this, a tab that has been idle for even a couple of seconds would
+      // push its stale copy of every collection and silently undo whatever
+      // another tab/role (e.g. IT approving access, or a document upload)
+      // had just saved to the server in the meantime.
+      const remote = await fetchAppState();
+      const merged = Object.fromEntries(
+        SYNCED_COLLECTIONS.map((key) => [key, mergeCollection(local[key], remote?.[key])])
+      );
+
+      const setters = { employees: (v) => setEmployees(normalizeEmployees(v)), tasks: setTasks, equipment: setEquipment, accessRequests: setAccessRequests, notifications: setNotifications, departments: setDepartments, auditLogs: setAuditLogs };
+      for (const key of SYNCED_COLLECTIONS) {
+        if (JSON.stringify(merged[key]) !== JSON.stringify(local[key])) setters[key](merged[key]);
+      }
+
+      const result = await syncAppState(merged);
+      pushInFlight.current = false;
+      if (result) {
+        setSystemMode("API connected");
+      } else {
+        setSystemMode("Offline (using local cache)");
+      }
     }, 800);
     return () => window.clearTimeout(handle);
   }, [hydratedFromApi, employees, tasks, equipment, accessRequests, notifications, departments, auditLogs]);
@@ -566,7 +626,7 @@ export default function Layout() {
 
     setEmployees((previous) => normalizeEmployees([
       ...previous,
-      ...demoEmployees.filter((demo) => !previous.some((employee) => employee.id === demo.id || employee.email === demo.email)),
+      ...demoEmployees.filter((demo) => !previous.some((employee) => employee.id === demo.id || employee.email === demo.email)).map(withTimestamp),
     ]));
 
     const demoTasks = [
@@ -590,7 +650,7 @@ export default function Layout() {
       },
     ];
     setTasks((previous) => [
-      ...demoTasks.filter((demo) => !previous.some((task) => task.id === demo.id)),
+      ...demoTasks.filter((demo) => !previous.some((task) => task.id === demo.id)).map(withTimestamp),
       ...previous,
     ]);
 
@@ -598,13 +658,13 @@ export default function Layout() {
       id: "eq-blaire-macbook", item: 'MacBook Pro 14" M4', assetTag: "JO-2148",
       assignedTo: "Blaire Willow", status: "Pending Assignment",
     };
-    setEquipment((previous) => previous.some((item) => item.id === demoEquipment.id) ? previous : [demoEquipment, ...previous]);
+    setEquipment((previous) => previous.some((item) => item.id === demoEquipment.id) ? previous : [withTimestamp(demoEquipment), ...previous]);
 
     const demoAccess = {
       id: "acc-carter-m365", name: "Carter Johnson", avatar: "https://i.pravatar.cc/100?u=carter-johnson",
       system: "Microsoft 365", requested: "Jul 22, 2026", status: "Pending",
     };
-    setAccessRequests((previous) => previous.some((request) => request.id === demoAccess.id) ? previous : [demoAccess, ...previous]);
+    setAccessRequests((previous) => previous.some((request) => request.id === demoAccess.id) ? previous : [withTimestamp(demoAccess), ...previous]);
 
     localStorage.setItem(migrationKey, "complete");
   }, []);
@@ -620,13 +680,13 @@ export default function Layout() {
     ];
     setTasks((previous) => {
       const ids = new Set(previous.map((task) => task.id));
-      return [...demoTasks.filter((task) => !ids.has(task.id)), ...previous];
+      return [...demoTasks.filter((task) => !ids.has(task.id)).map(withTimestamp), ...previous];
     });
     localStorage.setItem(migrationKey, "complete");
   }, []);
 
   function recordAudit(action, resourceType, resourceId, details = {}) {
-    setAuditLogs((previous) => [{
+    setAuditLogs((previous) => [withTimestamp({
       id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       actorName: currentUser.name,
       actorEmail: currentUser.email || `${String(currentUser.name || "user").toLowerCase().replace(/\s+/g, ".")}@journeyone.com`,
@@ -637,13 +697,13 @@ export default function Layout() {
       status: details.status || "SUCCESS",
       details,
       createdAt: new Date().toISOString(),
-    }, ...previous]);
+    }), ...previous]);
   }
 
   function completeTaskFor(employeeId, actionType) {
     setTasks((previous) => previous.map((task) =>
       task.employeeId === employeeId && task.actionType === actionType
-        ? { ...task, done: true, status: "COMPLETED", completedAt: new Date().toISOString(), completedBy: currentUser.name }
+        ? withTimestamp({ ...task, done: true, status: "COMPLETED", completedAt: new Date().toISOString(), completedBy: currentUser.name })
         : task
     ));
   }
@@ -656,7 +716,7 @@ export default function Layout() {
       "archive-employee":"EMPLOYEE_ARCHIVED"
     };
     const ownerByAction = { WELCOME_SENT:"HR_MANAGER", DOCUMENTS_APPROVED:"HR_MANAGER", ACCESS_PROVISIONED:"IT_MANAGER", EQUIPMENT_ASSIGNED:"IT_MANAGER", ORIENTATION_SCHEDULED:"HR_MANAGER", TEAMS_NOTIFIED:"HR_MANAGER", ACCESS_REVOKED:"IT_MANAGER", FILES_TRANSFERRED:"HR_MANAGER", EQUIPMENT_COLLECTED:"IT_MANAGER", EXIT_INTERVIEW_COMPLETED:"HR_MANAGER", EMPLOYEE_ARCHIVED:"HR_MANAGER" };
-    const newTasks = employee.steps.map((step, index) => ({
+    const newTasks = employee.steps.map((step, index) => withTimestamp({
       id:`task-${Date.now()}-${index}`, employeeId:employee.id, actionType:actionByStep[step.id],
       label:`${step.label} for ${employee.name}`, subLabel:employee.type === "onboarding" ? "Onboarding" : "Offboarding",
       priority:index < 2 ? "High" : index < 4 ? "Medium" : "Low", assignedRole:ownerByAction[actionByStep[step.id]],
@@ -693,14 +753,14 @@ export default function Layout() {
           (steps.filter((step) => step.done).length / steps.length) * 100
         );
         const nextIncomplete = steps.find((step) => !step.done);
-        return {
+        return withTimestamp({
           ...employee,
           steps,
           progress,
           nextStep: nextIncomplete
             ? { ...employee.nextStep, label: nextIncomplete.label, due: "Today" }
             : { label: "Onboarding complete", icon: "check", due: "Complete" },
-        };
+        });
       })
     );
   }
@@ -732,7 +792,7 @@ export default function Layout() {
         );
         const nextIncomplete = steps.find((step) => !step.done);
 
-        return {
+        return withTimestamp({
           ...employee,
           steps,
           progress,
@@ -744,7 +804,7 @@ export default function Layout() {
           nextStep: nextIncomplete
             ? { label: nextIncomplete.label, icon: nextIncomplete.icon || "file", due: "Today" }
             : { label: "Onboarding complete", icon: "check", due: "Complete" },
-        };
+        });
       })
     );
 
@@ -752,7 +812,7 @@ export default function Layout() {
       setEquipment((previous) =>
         previous.map((item) =>
           item.id === details.equipmentId
-            ? { ...item, assignedTo: details.employeeName, status: "Assigned" }
+            ? withTimestamp({ ...item, assignedTo: details.employeeName, status: "Assigned" })
             : item
         )
       );
@@ -769,12 +829,12 @@ export default function Layout() {
     safeApi(`/employees/${employeeId}/steps/${stepId}`, { method:"PATCH", body:JSON.stringify({ details }) });
 
     setNotifications((previous) => [
-      {
+      withTimestamp({
         id: `n-${Date.now()}`,
         text: `${completedLabel} completed for ${details.employeeName || "employee"}`,
         time: "Just now",
         read: false,
-      },
+      }),
       ...previous,
     ]);
 
@@ -805,7 +865,7 @@ export default function Layout() {
         });
         const progress = Math.round((steps.filter((step) => step.done).length / steps.length) * 100);
         const nextIncomplete = steps.find((step) => !step.done);
-        return {
+        return withTimestamp({
           ...employee,
           steps,
           progress,
@@ -814,14 +874,14 @@ export default function Layout() {
           nextStep: nextIncomplete
             ? { label: nextIncomplete.label, icon: nextIncomplete.icon || "file", due: "Today" }
             : { label: "Offboarding complete", icon: "check", due: "Complete" },
-        };
+        });
       })
     );
 
     if (stepId === "revoke-access") {
       setAccessRequests((previous) =>
         previous.map((request) =>
-          request.name === employeeName ? { ...request, status: "Revoked" } : request
+          request.name === employeeName ? withTimestamp({ ...request, status: "Revoked" }) : request
         )
       );
     }
@@ -830,7 +890,7 @@ export default function Layout() {
       setEquipment((previous) =>
         previous.map((item) =>
           item.assignedTo === employeeName
-            ? { ...item, assignedTo: "Unassigned", status: "Available" }
+            ? withTimestamp({ ...item, assignedTo: "Unassigned", status: "Available" })
             : item
         )
       );
@@ -842,12 +902,12 @@ export default function Layout() {
     safeApi(`/employees/${employeeId}/steps/${stepId}`, { method:"PATCH", body:JSON.stringify({ details }) });
 
     setNotifications((previous) => [
-      {
+      withTimestamp({
         id: `n-${Date.now()}`,
         text: `${completedLabel} completed for ${employeeName}`,
         time: "Just now",
         read: false,
-      },
+      }),
       ...previous,
     ]);
 
@@ -909,7 +969,7 @@ export default function Layout() {
     ];
 
     const steps = type === "onboarding" ? onboardingSteps : offboardingSteps;
-    const employee = {
+    const employee = withTimestamp({
       id,
       name,
       role,
@@ -930,7 +990,7 @@ export default function Layout() {
         due: "Today",
       },
       steps,
-    };
+    });
 
     if (type === "offboarding" && existingEmployee) {
       const alreadyOffboarding = employees.some(
@@ -945,13 +1005,17 @@ export default function Layout() {
 
     setEmployees((previous) => [employee, ...previous]);
     createTasksForJourney(employee);
-    if (type === "offboarding" && existingEmployee) {
-      setEquipment((previous) => previous.map((item) =>
-        item.status === "Assigned" &&
-        (item.employeeId === existingEmployee.id || item.assignedTo === existingEmployee.name)
-          ? { ...item, status: "To Be Collected", employeeId: employee.id, assignedTo: employee.name }
-          : item
-      ));
+    if (type === "offboarding") {
+      const typedName = normalizedIdentity(name);
+      setEquipment((previous) => previous.map((item) => {
+        const matchesExisting = existingEmployee && (
+          item.employeeId === existingEmployee.id || normalizedIdentity(item.assignedTo) === normalizedIdentity(existingEmployee.name)
+        );
+        const matchesTypedName = !existingEmployee && normalizedIdentity(item.assignedTo) === typedName;
+        return item.status === "Assigned" && (matchesExisting || matchesTypedName)
+          ? withTimestamp({ ...item, status: "To Be Collected", employeeId: employee.id, assignedTo: employee.name })
+          : item;
+      }));
     }
     recordAudit(type === "onboarding" ? "ONBOARDING_INITIATED" : "OFFBOARDING_INITIATED", "employee", employee.id, {
       type,
@@ -978,7 +1042,7 @@ export default function Layout() {
 
   function addCustomHrTask({ label, employeeId, priority, dueDate, route }) {
     const employee = employees.find((item) => item.id === employeeId);
-    const task = {
+    const task = withTimestamp({
       id: `task-custom-${Date.now()}`,
       employeeId: employeeId || null,
       actionType: "CUSTOM_HR_TASK",
@@ -991,7 +1055,7 @@ export default function Layout() {
       done: false,
       route,
       custom: true,
-    };
+    });
     setTasks((previous) => [task, ...previous]);
     recordAudit("HR_TASK_CREATED", "task", task.id, { employeeId, route });
     setModal(null);
@@ -1053,12 +1117,12 @@ export default function Layout() {
         return;
       }
       const nextDone = !(task.done || task.status === "COMPLETED");
-      setTasks((previous) => previous.map((item) => item.id === id ? {
+      setTasks((previous) => previous.map((item) => item.id === id ? withTimestamp({
         ...item,
         done: nextDone,
         status: nextDone ? "COMPLETED" : "OPEN",
         completedAt: nextDone ? new Date().toISOString() : null,
-      } : item));
+      }) : item));
       recordAudit(nextDone ? "TASK_MANUALLY_COMPLETED" : "TASK_REOPENED", "task", id, {
         employeeId: task.employeeId,
         actionType: task.actionType,
@@ -1079,7 +1143,7 @@ export default function Layout() {
         return;
       }
       const requestedAt = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-      const newRequests = systems.map((system, index) => ({
+      const newRequests = systems.map((system, index) => withTimestamp({
         id: `acc-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
         employeeId: employee.id,
         name: employee.name,
@@ -1091,7 +1155,7 @@ export default function Layout() {
       }));
       setAccessRequests((previous) => [...newRequests, ...previous]);
       setNotifications((previous) => [
-        { id: `n-${Date.now()}`, text: `${employee.name} needs access to ${systems.join(", ")} — sent to IT for approval.`, time: "Just now", read: false },
+        withTimestamp({ id: `n-${Date.now()}`, text: `${employee.name} needs access to ${systems.join(", ")} — sent to IT for approval.`, time: "Just now", read: false }),
         ...previous,
       ]);
       recordAudit("ACCESS_REQUESTED", "employee", employee.id, { systems });
@@ -1102,7 +1166,7 @@ export default function Layout() {
       if (!request) return;
       const decidedAt = new Date().toISOString();
       const updatedRequests = accessRequests.map((item) =>
-        item.id === id ? { ...item, status, reason, decidedAt, decidedBy: currentUser.name } : item
+        item.id === id ? withTimestamp({ ...item, status, reason, decidedAt, decidedBy: currentUser.name }) : item
       );
       setAccessRequests(updatedRequests);
 
@@ -1123,7 +1187,7 @@ export default function Layout() {
             });
           } else {
             setNotifications((previous) => [
-              { id: `n-${Date.now()}`, text: `IT denied all requested access for ${employee.name}. HR needs to submit a new request.`, time: "Just now", read: false },
+              withTimestamp({ id: `n-${Date.now()}`, text: `IT denied all requested access for ${employee.name}. HR needs to submit a new request.`, time: "Just now", read: false }),
               ...previous,
             ]);
           }
@@ -1141,12 +1205,12 @@ export default function Layout() {
       const item = equipment.find((entry) => entry.id === id);
       if (!item) return;
       const employee = employees.find((entry) => entry.id === item.employeeId) || employees.find((entry) => entry.name === item.assignedTo);
-      const updatedEquipment = equipment.map((entry) => entry.id === id ? {
+      const updatedEquipment = equipment.map((entry) => entry.id === id ? withTimestamp({
         ...entry,
         status,
         handledAt: new Date().toISOString(),
         ...(status === "Available" ? { assignedTo: "Unassigned", employeeId: null } : {}),
-      } : entry);
+      }) : entry);
       setEquipment(updatedEquipment);
 
       let message = "Equipment status updated.";
@@ -1200,18 +1264,18 @@ export default function Layout() {
         equipmentName: item.item,
         assetTag: item.assetTag,
       });
-      setEquipment((previous) => previous.map((entry) => entry.id === equipmentId ? {
+      setEquipment((previous) => previous.map((entry) => entry.id === equipmentId ? withTimestamp({
         ...entry,
         assignedTo: employee.name,
         employeeId: employee.id,
         status: "Assigned",
         assignedAt: new Date().toISOString(),
-      } : entry));
+      }) : entry));
       flash(`${item.item} assigned to ${employee.name}.`);
     },
     addEquipment: (item) =>
       setEquipment((previous) => [
-        { id: `eq-${Date.now()}`, ...item },
+        withTimestamp({ id: `eq-${Date.now()}`, ...item }),
         ...previous,
       ]),
     updateEmployeeAccount: (employeeId, updates) => {
@@ -1219,7 +1283,7 @@ export default function Layout() {
       setEmployees((previous) => previous.map((employee) => {
         if (employee.id !== employeeId) return employee;
         updatedName = updates.name || employee.name;
-        return { ...employee, ...updates };
+        return withTimestamp({ ...employee, ...updates });
       }));
       completeTaskFor(employeeId, "ACCESS_PROVISIONED");
       recordAudit("ACCOUNT_UPDATED", "employee", employeeId, updates);
@@ -1233,13 +1297,13 @@ export default function Layout() {
         if (employee.id !== employeeId) return employee;
         nextStatus = (employee.accountStatus || "Active") === "Active" ? "Disabled" : "Active";
         employeeRef = employee;
-        return { ...employee, accountStatus: nextStatus };
+        return withTimestamp({ ...employee, accountStatus: nextStatus });
       }));
 
       if (employeeRef && nextStatus === "Disabled") {
         setAccessRequests((previous) => previous.map((request) =>
           (request.employeeId === employeeId || request.name === employeeRef.name) && request.status === "Approved"
-            ? { ...request, status: "Revoked", decidedAt: new Date().toISOString(), decidedBy: currentUser.name }
+            ? withTimestamp({ ...request, status: "Revoked", decidedAt: new Date().toISOString(), decidedBy: currentUser.name })
             : request
         ));
         if (employeeRef.type === "offboarding") {
@@ -1265,12 +1329,12 @@ export default function Layout() {
     markNotification: (id) =>
       setNotifications((previous) =>
         previous.map((notification) =>
-          notification.id === id ? { ...notification, read: true } : notification
+          notification.id === id ? withTimestamp({ ...notification, read: true }) : notification
         )
       ),
     markAllNotifications: () =>
       setNotifications((previous) =>
-        previous.map((notification) => ({ ...notification, read: true }))
+        previous.map((notification) => withTimestamp({ ...notification, read: true }))
       ),
     setDepartments,
     saveUser: ({ name, title }) =>

@@ -28,8 +28,12 @@ async function ensureStore() {
 
 export async function readStore() {
   await ensureStore();
-  const { rows } = await pool.query("SELECT data FROM app_store WHERE id = 1");
-  return rows[0].data;
+
+  const { rows } = await pool.query(
+    "SELECT data FROM app_store WHERE id = 1"
+  );
+
+  return structuredClone(rows[0].data);
 }
 
 export async function writeStore(data) {
@@ -44,12 +48,30 @@ export async function writeStore(data) {
 }
 
 export async function updateStore(mutator) {
-  const data = await readStore();
-  const result = await mutator(data);
-  await writeStore(data);
-  return result;
-}
+  writeQueue = writeQueue.then(async () => {
+    await ensureStore();
 
+    const { rows } = await pool.query(
+      "SELECT data FROM app_store WHERE id = 1"
+    );
+
+    const data = rows[0].data;
+
+    const result = await mutator(data);
+
+    await pool.query(
+      `UPDATE app_store
+       SET data = $1,
+           updated_at = NOW()
+       WHERE id = 1`,
+      [JSON.stringify(data)]
+    );
+
+    return result;
+  });
+
+  return writeQueue;
+}
 export function makeId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }

@@ -216,7 +216,85 @@ app.post("/api/equipment/:id/assign", requireAuth, allowRoles("IT_MANAGER"), asy
 });
 app.post("/api/equipment/:id/return", requireAuth, allowRoles("IT_MANAGER"), async (req,res)=>{ const result=await updateStore(data=>{const item=data.equipment.find(e=>e.id===req.params.id);if(!item)return {error:"Equipment not found",status:404};const employeeId=item.employeeId;Object.assign(item,{status:"Available",assignedTo:"Unassigned",employeeId:null,returnedAt:new Date().toISOString()});if(employeeId)completeMatchingTasks(data,employeeId,"EQUIPMENT_COLLECTED",req.user.sub);addAudit(data,req,"EQUIPMENT_RETURNED","equipment",item.id,{employeeId});return {item};});if(result.error)return res.status(result.status).json({error:result.error});res.json(result.item);});
 
-app.patch("/api/access-requests/:id", requireAuth, allowRoles("IT_MANAGER"), async(req,res)=>{const parsed=z.object({status:z.enum(["Approved","Denied","Revoked"]),reason:z.string().optional()}).safeParse(req.body);if(!parsed.success)return res.status(400).json({error:"Invalid status"});const result=await updateStore(data=>{const request=data.accessRequests.find(a=>a.id===req.params.id);if(!request)return {error:"Request not found",status:404};Object.assign(request,parsed.data,{decidedBy:req.user.sub,decidedAt:new Date().toISOString()});if(request.employeeId&&parsed.data.status==="Approved")completeMatchingTasks(data,request.employeeId,"ACCESS_PROVISIONED",req.user.sub);addAudit(data,req,"ACCESS_REQUEST_DECIDED","accessRequest",request.id,{status:parsed.data.status,reason:parsed.data.reason});return {request};});if(result.error)return res.status(result.status).json({error:result.error});res.json(result.request);});
+app.patch("/api/access-requests/:id", requireAuth, allowRoles("IT_MANAGER"), async (req, res) => {
+  const parsed = z.object({
+    status: z.enum(["Approved", "Denied", "Revoked"]),
+    reason: z.string().optional(),
+  }).safeParse(req.body);
+
+  if (!parsed.success)
+    return res.status(400).json({ error: "Invalid status" });
+
+  const result = await updateStore((data) => {
+    const request = data.accessRequests.find(
+      (a) => a.id === req.params.id
+    );
+
+    if (!request)
+      return { error: "Request not found", status: 404 };
+
+    Object.assign(request, parsed.data, {
+      decidedBy: req.user.sub,
+      decidedAt: new Date().toISOString(),
+    });
+
+    if (
+      request.employeeId &&
+      parsed.data.status === "Approved"
+    ) {
+      completeMatchingTasks(
+        data,
+        request.employeeId,
+        "ACCESS_PROVISIONED",
+        req.user.sub
+      );
+
+      const employee = data.employees.find(
+        (e) => e.id === request.employeeId
+      );
+
+      if (employee) {
+        const step = employee.steps.find(
+          (s) => s.id === "provision-access"
+        );
+
+        if (step && !step.done) {
+          step.done = true;
+          step.completedAt = new Date().toISOString();
+
+          employee.progress = Math.round(
+            (employee.steps.filter((s) => s.done).length /
+              employee.steps.length) * 100
+          );
+
+          employee.status =
+            employee.progress === 100
+              ? "Completed"
+              : "In Progress";
+        }
+      }
+    }
+
+    addAudit(
+      data,
+      req,
+      "ACCESS_REQUEST_DECIDED",
+      "accessRequest",
+      request.id,
+      {
+        status: parsed.data.status,
+        reason: parsed.data.reason,
+      }
+    );
+
+    return { request };
+  });
+
+  if (result.error)
+    return res.status(result.status).json({ error: result.error });
+
+  res.json(result.request);
+});
 
 app.get("/api/audit-logs", requireAuth, allowRoles("IT_MANAGER","HR_MANAGER","AUDITOR"), async(req,res)=>{const data=await readStore();res.json(data.auditLogs.slice(0,Number(req.query.limit)||200));});
 app.get("/api/metrics", requireAuth, async(_req,res)=>{const data=await readStore();const open=data.tasks.filter(t=>t.status!=="COMPLETED");const overdue=open.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());res.json({employees:data.employees.length,openTasks:open.length,overdueTasks:overdue.length,completedTasks:data.tasks.filter(t=>t.status==="COMPLETED").length,auditEvents:data.auditLogs.length,generatedAt:new Date().toISOString()});});
